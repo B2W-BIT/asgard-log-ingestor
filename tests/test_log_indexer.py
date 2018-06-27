@@ -1,7 +1,7 @@
 import json
 from freezegun import freeze_time
 import asynctest
-from asynctest.mock import CoroutineMock
+from asynctest.mock import CoroutineMock, ANY
 
 from logingestor.indexer import AppIndexer
 
@@ -73,7 +73,39 @@ class LogIndexerTest(asynctest.TestCase):
                "key" : "asgard.app.infra.asgard.logs.counts"
             }
         """
-        self.fail()
+        expected_document = {
+            "timestamp" : "2018-06-21T19:26:06+00:00",
+               "appname" : "/sieve/captura/seller/feed-buybox/buybox-stream-reader",
+               "file_path" : "/opt/app/countsingestor/indexer.py",
+               "logged_at" : "2018-06-21T19:26:06.648610+00:00",
+               "level" : "INFO",
+               "line_number" : 37,
+               "index-time" : 0,
+               "function" : "index",
+               "count-type" : "OK",
+            "asgard_index_delay": ANY,
+        }
+        prepared_document = self.indexer._prepare_document(self.logmessage_parse_ok)
+        self.assertDictEqual(expected_document, prepared_document)
+
+    @freeze_time("2018-06-21T19:26:06+00:00")
+    def test_prepare_indexed_document_do_not_override_special_fields(self):
+        self.logmessage_parse_ok['payload']['timestamp'] = 1530120546 # ~qua jun 27 17:28:57 UTC 2018
+        self.logmessage_parse_ok['payload']['asgard_index_delay'] = 42
+        expected_document = {
+            "timestamp" : "2018-06-21T19:26:06+00:00",
+               "appname" : "/sieve/captura/seller/feed-buybox/buybox-stream-reader",
+               "file_path" : "/opt/app/countsingestor/indexer.py",
+               "logged_at" : "2018-06-21T19:26:06.648610+00:00",
+               "level" : "INFO",
+               "line_number" : 37,
+               "index-time" : 0,
+               "function" : "index",
+               "count-type" : "OK",
+            "asgard_index_delay": 0.0,
+        }
+        prepared_document = self.indexer._prepare_document(self.logmessage_parse_ok)
+        self.assertDictEqual(expected_document, prepared_document)
 
     def test_prepare_indexed_document_log_parse_error(self):
         """
@@ -92,7 +124,19 @@ class LogIndexerTest(asynctest.TestCase):
                "timestamp" : 1530108596
             }
         """
-        self.fail()
+        self.maxDiff = None
+        expected_document = {
+            "timestamp" : "2018-06-27T14:09:56+00:00",
+            "asgard_index_delay": ANY,
+            "fluentd_tag" : "asgard.app.sieve.captura.kirby.powerup",
+            "log" : "  File /usr/local/lib/python3.6/site-packages/aioamqp/protocol.py, line 235, in get_frame",
+            "container_id" : "d1b2c3ef17f86a3e5b6b16b4b6a566310f133ec399d9666ddcf003da0bfa9c77",
+            "container_name" : "/mesos-d7bf305c-2e34-4597-b5dc-e1cb3144c6b9",
+            "source" : "stderr",
+            "parse_error" : "true"
+        }
+        prepared_document = self.indexer._prepare_document(self.logmessage_parse_error)
+        self.assertDictEqual(expected_document, prepared_document)
 
     def test_prepare_indexed_document_add_delay_key_log_ok(self):
         """
