@@ -2,8 +2,9 @@ import json
 from freezegun import freeze_time
 import asynctest
 from asynctest.mock import CoroutineMock, ANY
+from asynctest import mock
 
-from logingestor.indexer import AppIndexer
+from logingestor.indexer import Indexer, AppIndexer
 
 class LogIndexerTest(asynctest.TestCase):
 
@@ -16,7 +17,6 @@ class LogIndexerTest(asynctest.TestCase):
             {
                "timestamp" : 1529609166,
                "payload" : {
-                  "appname" : "/sieve/captura/seller/feed-buybox/buybox-stream-reader",
                   "file_path" : "/opt/app/countsingestor/indexer.py",
                   "logged_at" : "2018-06-21T19:26:06.648610+00:00",
                   "level" : "INFO",
@@ -51,8 +51,8 @@ class LogIndexerTest(asynctest.TestCase):
         Index name: asgard-app-logs-<namespace>-<appname>
         Trocamos "/" por "-"
         """
-        self.assertEqual("asgard-app-logs-infra-asgard-logs-counts-2018-06-27", self.indexer._index_name("asgard.app.infra.asgard.logs.counts"))
-        self.assertEqual("asgard-app-logs-infra-asgard-logs-counts-2018-06-27", self.indexer._index_name("errors.asgard.app.infra.asgard.logs.counts"))
+        self.assertEqual("asgard-app-logs-infra-asgard-logs-counts-2018-06-27", self.indexer._index_name({"key": "asgard.app.infra.asgard.logs.counts"}))
+        self.assertEqual("asgard-app-logs-infra-asgard-logs-counts-2018-06-27", self.indexer._index_name({"key": "errors.asgard.app.infra.asgard.logs.counts"}))
 
     def test_prepare_indexed_document_log_parse_ok(self):
         """
@@ -61,7 +61,6 @@ class LogIndexerTest(asynctest.TestCase):
             {
                "timestamp" : 1529609166,
                "payload" : {
-                  "appname" : "/sieve/captura/seller/feed-buybox/buybox-stream-reader",
                   "file_path" : "/opt/app/countsingestor/indexer.py",
                   "logged_at" : "2018-06-21T19:26:06.648610+00:00",
                   "level" : "INFO",
@@ -75,7 +74,6 @@ class LogIndexerTest(asynctest.TestCase):
         """
         expected_document = {
             "timestamp" : "2018-06-21T19:26:06+00:00",
-               "appname" : "/sieve/captura/seller/feed-buybox/buybox-stream-reader",
                "file_path" : "/opt/app/countsingestor/indexer.py",
                "logged_at" : "2018-06-21T19:26:06.648610+00:00",
                "level" : "INFO",
@@ -84,6 +82,7 @@ class LogIndexerTest(asynctest.TestCase):
                "function" : "index",
                "count-type" : "OK",
             "asgard_index_delay": ANY,
+            "appname": ANY,
         }
         prepared_document = self.indexer._prepare_document(self.logmessage_parse_ok)
         self.assertDictEqual(expected_document, prepared_document)
@@ -92,17 +91,18 @@ class LogIndexerTest(asynctest.TestCase):
     def test_prepare_indexed_document_do_not_override_special_fields(self):
         self.logmessage_parse_ok['payload']['timestamp'] = 1530120546 # ~qua jun 27 17:28:57 UTC 2018
         self.logmessage_parse_ok['payload']['asgard_index_delay'] = 42
+        self.logmessage_parse_ok['payload']['appname'] = "my-app-name"
         expected_document = {
-            "timestamp" : "2018-06-21T19:26:06+00:00",
-               "appname" : "/sieve/captura/seller/feed-buybox/buybox-stream-reader",
-               "file_path" : "/opt/app/countsingestor/indexer.py",
-               "logged_at" : "2018-06-21T19:26:06.648610+00:00",
-               "level" : "INFO",
-               "line_number" : 37,
-               "index-time" : 0,
-               "function" : "index",
-               "count-type" : "OK",
-            "asgard_index_delay": 0.0,
+           "timestamp" : "2018-06-21T19:26:06+00:00",
+           "appname" : "/infra/asgard/logs/counts",
+           "file_path" : "/opt/app/countsingestor/indexer.py",
+           "logged_at" : "2018-06-21T19:26:06.648610+00:00",
+           "level" : "INFO",
+           "line_number" : 37,
+           "index-time" : 0,
+           "function" : "index",
+           "count-type" : "OK",
+           "asgard_index_delay": 0.0,
         }
         prepared_document = self.indexer._prepare_document(self.logmessage_parse_ok)
         self.assertDictEqual(expected_document, prepared_document)
@@ -124,10 +124,10 @@ class LogIndexerTest(asynctest.TestCase):
                "timestamp" : 1530108596
             }
         """
-        self.maxDiff = None
         expected_document = {
             "timestamp" : "2018-06-27T14:09:56+00:00",
             "asgard_index_delay": ANY,
+            "appname": ANY,
             "fluentd_tag" : "asgard.app.sieve.captura.kirby.powerup",
             "log" : "  File /usr/local/lib/python3.6/site-packages/aioamqp/protocol.py, line 235, in get_frame",
             "container_id" : "d1b2c3ef17f86a3e5b6b16b4b6a566310f133ec399d9666ddcf003da0bfa9c77",
@@ -170,13 +170,41 @@ class LogIndexerTest(asynctest.TestCase):
             prepared_document = self.indexer._prepare_document(self.logmessage_parse_error)
             self.assertEqual(64, prepared_document['asgard_index_delay'])
 
-    def test_call_bulk_insert(self):
+    async def test_generated_right_action_data_for_bulk_insert(self):
         """
-        Dado uma lista de documentos a serem indexados,
-        chamamos o `.bulk()` com o conteúdo correto, que é
-        uma linha de "action" para cada documento que está sendo
-        indexado.
-        Exemplo de Action:
-        { "index" : { "_index" : "asgard-app-logs-calculator-timing", "_type" : "logs"}}
+        Antes de passar o(s) documento(s) para o elasticsearch, devemos
+        chamar `self._prepare_document(document)`.
+        E para gerar o nome do índice onde esse documento será indexado, chamamos
+        `self._index_name(document)`
         """
-        self.fail()
+        class MyIndexer(Indexer):
+
+            def _prepare_document(self, document):
+                del document['key']
+                document['new-key'] = 42
+                return document
+
+            def _index_name(self, document):
+                return "my-important-index"
+
+        self.elasticsearch_mock.bulk.return_value = 42
+        indexer = MyIndexer(self.elasticsearch_mock)
+        returned_by_elasticsearch = await indexer.bulk([{"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10}])
+        self.assertEqual([mock.call([
+            { "index" : { "_index" : "my-important-index", "_type" : "logs"}},
+            {"some-value": 10, "new-key": 42},
+        ])], self.elasticsearch_mock.bulk.await_args_list)
+        self.assertEqual(42, returned_by_elasticsearch)
+
+    async def test_confirms_default_prepare_document_implementation(self):
+        class MyOtherIndexer(Indexer):
+            def _index_name(self, document):
+                return "my-important-index"
+
+        indexer = MyOtherIndexer(self.elasticsearch_mock)
+        await indexer.bulk([{"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10}])
+        self.assertEqual([mock.call([
+            { "index" : { "_index" : "my-important-index", "_type" : "logs"}},
+            {"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10},
+        ])], self.elasticsearch_mock.bulk.await_args_list)
+

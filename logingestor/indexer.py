@@ -11,15 +11,31 @@ class Indexer:
         pass
 
     async def bulk(self, documents):
-        pass
+        _bulk = []
+        for doc in documents:
+            _bulk.append({ "index" : { "_index" : self._index_name(doc), "_type" : "logs"}})
+            _bulk.append(self._prepare_document(doc))
+        return await self.elasticsearch.bulk(_bulk)
+
+    def _prepare_document(self, document):
+        return document
+
+    def _index_name(self, doc):
+        raise NotImplementedError
 
 
 class AppIndexer(Indexer):
 
-    def _index_name(self, fluentd_key):
-        app_name_with_namespace = fluentd_key.replace("errors.", "", 1) \
+
+    def _app_name_with_namespace(self, document):
+        app_name_with_namespace = document['key'].replace("errors.", "", 1) \
                                              .replace("asgard.app.", "", 1) \
-                                             .replace(".", "-")
+                                             .replace(".", "/")
+        return app_name_with_namespace
+
+
+    def _index_name(self, document):
+        app_name_with_namespace = self._app_name_with_namespace(document).replace("/", "-")
         data_part = datetime.utcnow().strftime("%Y-%m-%d")
         return f"asgard-app-logs-{app_name_with_namespace}-{data_part}"
 
@@ -32,5 +48,6 @@ class AppIndexer(Indexer):
         final_document.update({
             'asgard_index_delay': processing_delay.total_seconds(),
             'timestamp': timestamp.isoformat(),
+            'appname': f"/{self._app_name_with_namespace(raw_document)}",
         })
         return final_document

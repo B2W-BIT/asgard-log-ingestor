@@ -30,3 +30,4 @@ RABBITMQ_PWD = os.getenv("LOGS_RABBITMQ_PWD", "guest")
 RABBITMQ_PREFETCH = int(os.getenv("LOGS_RABBITMQ_PREFETCH", 32))
 RABBITMQ_VHOST = os.getenv("LOGS_RABBITMQ_VHOST", "/")
 LOGS_QUEUE_NAMES = [item.strip() for item in os.getenv("LOGS_QUEUE_NAMES", "").split(",")]
+LOGS_BULK_SIZE = int(os.getenv("LOGS_BULK_SIZE", 1))
