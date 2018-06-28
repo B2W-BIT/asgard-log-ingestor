@@ -7,21 +7,86 @@ from logingestor import routes
 
 class RoutesTest(asynctest.TestCase):
 
-    async def test_calls_index_bulk_passing_received_message_bodies(self):
-        self.fail()
+    async def setUp(self):
+        self.elasticsearch_mock = mock.CoroutineMock(bulk=mock.CoroutineMock())
+        self.logger_mock = mock.CoroutineMock(info=mock.CoroutineMock(), error=mock.CoroutineMock())
+        mock.patch.object(routes.conf, 'logger', self.logger_mock).start()
 
-    def test_if_result_does_not_have_errors_dont_iterate_it(self):
+    async def tearDown(self):
+        mock.patch.stopall()
+
+    async def test_calls_index_bulk_passing_received_message_bodies(self):
+        indexer_bulk_mock = mock.CoroutineMock()
+        with mock.patch.object(routes.indexer, "bulk", indexer_bulk_mock):
+            messages = [
+                RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "value"}}, delivery_tag=10),
+                RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "other-value"}}, delivery_tag=11),
+            ]
+            expected_bodies = list((m.body for m in messages))
+            indexer_bulk_mock.return_value = {"items": [], "errors": False}
+            await routes.generic_app_log_indexer(messages)
+            self.assertEqual(expected_bodies, list(indexer_bulk_mock.await_args_list[0][0][0]))
+
+
+    async def test_if_result_does_not_have_errors_dont_iterate_it(self):
         """
         Se o ES retornar indicando que não há erros, não precisamos iterar todas as mensagens
         chamando `.reject()`, afinal todas foram indexadas com sucesso
         """
-        self.fail()
+        indexer_bulk_mock = mock.CoroutineMock()
+        with mock.patch.object(routes.indexer, "bulk", indexer_bulk_mock):
+            messages = [
+                RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "value"}}, delivery_tag=10),
+                RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "other-value"}}, delivery_tag=11),
+            ]
+            expected_bodies = list((m.body for m in messages))
+            indexer_bulk_mock.return_value = {"errors": False}
+            # deveria lançar exception caso tente iterar em result['items']
+            await routes.generic_app_log_indexer(messages)
 
-    def test_only_logs_one_error_per_bulk_insert(self):
+    async def test_only_logs_one_error_per_bulk_insert(self):
         """
         Mesmo que tenhamos mais de uma mensagem rejeitada em um mesmo bulk, logamos apenaso primeiro erro.
         """
-        self.fail()
+        messages = [
+            RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "value"}}, delivery_tag=10),
+            RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "other-value"}}, delivery_tag=11),
+        ]
+        self.elasticsearch_mock.bulk.return_value = {
+            "took": 30,
+            "errors": True,
+            "items": [
+             {
+                "index" : {
+                   "error" : {
+                      "type" : "illegal_argument_exception",
+                      "reason" : "Cant merge a non object mapping [marketplace_sellers] with an object mapping [marketplace_sellers]"
+                   },
+                   "_type" : "logs",
+                   "_id" : "AWRDEIdY6_jLl57Ht_Gj",
+                   "status" : 400,
+                   "_index" : "asgard-app-logs-sieve-captura-wetl-updater-marketplace-2018-06-27"
+                }
+             },
+              {
+                "index" : {
+                   "error" : {
+                      "type" : "illegal_argument_exception",
+                      "reason" : "Cant merge a non object mapping [marketplace_sellers] with an object mapping [marketplace_sellers]"
+                   },
+                   "_type" : "logs",
+                   "_id" : "AWRDEIdY6_jLl57Ht_Gj",
+                   "status" : 400,
+                   "_index" : "asgard-app-logs-sieve-captura-wetl-updater-marketplace-2018-06-27"
+                }
+             }
+            ]
+         }
+        with mock.patch.object(routes.indexer, "elasticsearch", self.elasticsearch_mock):
+            await routes.generic_app_log_indexer(messages)
+            self.assertEqual(1, self.logger_mock.error.await_count)
+            self.assertEqual("value", self.logger_mock.error.await_args_list[0][0][0]['original-message']['payload']['field'])
+            self.assertEqual([mock.call({'messages-processed': 2, 'accepted-messages': 0, 'rejected': 2, 'errors': True})], self.logger_mock.info.await_args_list)
 
     async def test_tejects_some_messages_if_elastic_search_returns_some_errors(self):
         messages = [

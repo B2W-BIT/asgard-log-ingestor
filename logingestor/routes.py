@@ -19,12 +19,13 @@ async def generic_app_log_indexer(messages):
     rejected = 0
     accepted = total_messages
     result = await indexer.bulk((m.body for m in messages))
-    for idx, item in enumerate(result['items']):
-        if item['index'].get("error"):
-            messages[idx].reject()
-            rejected += 1
-            if should_log_error:
-                await conf.logger.error({**item['index']['error'], "original-message": messages[idx].body})
-                should_log_error = False #Logamos apenas um erro por batch
-    await conf.logger.info({"messages-processed": total_messages, "accepted-messages": accepted - rejected, "rejected": rejected, "errors": result['errors']})
+    if result["errors"]:
+        for idx, item in enumerate(result['items']):
+            if item['index'].get("error"):
+                messages[idx].reject()
+                rejected += 1
+                if should_log_error:
+                    await conf.logger.error({**item['index']['error'], "original-message": messages[idx].body})
+                    should_log_error = False #Logamos apenas um erro por batch
+        await conf.logger.info({"messages-processed": total_messages, "accepted-messages": accepted - rejected, "rejected": rejected, "errors": result['errors']})
 
