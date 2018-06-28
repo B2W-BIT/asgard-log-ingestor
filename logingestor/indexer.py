@@ -36,7 +36,7 @@ class AppIndexer(Indexer):
 
     def _index_name(self, document):
         app_name_with_namespace = self._app_name_with_namespace(document).replace("/", "-")
-        data_part = datetime.utcnow().strftime("%Y-%m-%dT%H")
+        data_part = datetime.utcnow().strftime("%Y-%m-%d-%H")
         return f"asgard-app-logs-{app_name_with_namespace}-{data_part}"
 
     def _prepare_document(self, raw_document):
