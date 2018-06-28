@@ -51,8 +51,8 @@ class LogIndexerTest(asynctest.TestCase):
         Index name: asgard-app-logs-<namespace>-<appname>
         Trocamos "/" por "-"
         """
-        self.assertEqual("asgard-app-logs-infra-asgard-logs-counts-2018-06-27", self.indexer._index_name({"key": "asgard.app.infra.asgard.logs.counts"}))
-        self.assertEqual("asgard-app-logs-infra-asgard-logs-counts-2018-06-27", self.indexer._index_name({"key": "errors.asgard.app.infra.asgard.logs.counts"}))
+        self.assertEqual("asgard-app-logs-infra-asgard-logs-counts-2018-06-27T10", self.indexer._index_name({"key": "asgard.app.infra.asgard.logs.counts"}))
+        self.assertEqual("asgard-app-logs-infra-asgard-logs-counts-2018-06-27T10", self.indexer._index_name({"key": "errors.asgard.app.infra.asgard.logs.counts"}))
 
     def test_prepare_indexed_document_log_parse_ok(self):
         """
