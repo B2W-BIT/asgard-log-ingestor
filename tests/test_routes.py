@@ -51,6 +51,7 @@ class RoutesTest(asynctest.TestCase):
         messages = [
             RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "value"}}, delivery_tag=10),
             RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "other-value"}}, delivery_tag=11),
+            RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "some-other-value"}}, delivery_tag=11),
         ]
         self.elasticsearch_mock.bulk.return_value = {
             "took": 30,
@@ -79,6 +80,14 @@ class RoutesTest(asynctest.TestCase):
                    "status" : 400,
                    "_index" : "asgard-app-logs-sieve-captura-wetl-updater-marketplace-2018-06-27"
                 }
+             },
+            {
+                "index" : {
+                   "_type" : "logs",
+                   "_id" : "AWRDEIdY6_jLl57Ht_Gj",
+                   "status" : 400,
+                   "_index" : "asgard-app-logs-sieve-captura-wetl-updater-marketplace-2018-06-27"
+                }
              }
             ]
          }
@@ -86,7 +95,19 @@ class RoutesTest(asynctest.TestCase):
             await routes.generic_app_log_indexer(messages)
             self.assertEqual(1, self.logger_mock.error.await_count)
             self.assertEqual("value", self.logger_mock.error.await_args_list[0][0][0]['original-message']['payload']['field'])
-            self.assertEqual([mock.call({'messages-processed': 2, 'accepted-messages': 0, 'rejected': 2, 'errors': True})], self.logger_mock.info.await_args_list)
+
+
+    async def test_log_one_message_per_batch_processed(self):
+        indexer_bulk_mock = mock.CoroutineMock()
+        with mock.patch.object(routes.indexer, "bulk", indexer_bulk_mock):
+            messagemsessages = [
+                RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "value"}}, delivery_tag=10),
+                RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "other-value"}}, delivery_tag=11),
+            ]
+            expected_bodies = list((m.body for m in messagemsessages))
+            indexer_bulk_mock.return_value = {"errors": False}
+            await routes.generic_app_log_indexer(messagemsessages)
+            self.assertEqual([mock.call({'messages-processed': 2, 'accepted-messages': 2, 'rejected': 0, 'errors': False})], self.logger_mock.info.await_args_list)
 
     async def test_tejects_some_messages_if_elastic_search_returns_some_errors(self):
         messages = [

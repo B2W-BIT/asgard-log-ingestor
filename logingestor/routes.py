@@ -27,5 +27,5 @@ async def generic_app_log_indexer(messages):
                 if should_log_error:
                     await conf.logger.error({**item['index']['error'], "original-message": messages[idx].body})
                     should_log_error = False #Logamos apenas um erro por batch
-        await conf.logger.info({"messages-processed": total_messages, "accepted-messages": accepted - rejected, "rejected": rejected, "errors": result['errors']})
+    await conf.logger.info({"messages-processed": total_messages, "accepted-messages": accepted - rejected, "rejected": rejected, "errors": result['errors']})
 
