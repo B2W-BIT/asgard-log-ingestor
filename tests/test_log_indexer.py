@@ -45,14 +45,15 @@ class LogIndexerTest(asynctest.TestCase):
             }
         """)
 
-    @freeze_time("2018-06-27T10:00:00+00:00")
+    @freeze_time("2018-06-27T10:00:00-03:00")
     def test_test_generate_correct_index_name(self):
         """
         Index name: asgard-app-logs-<namespace>-<appname>
         Trocamos "/" por "-"
+        Sempre geramos parte da data no nome do índice usanto UTC.
         """
-        self.assertEqual("asgard-app-logs-infra-asgard-logs-counts-2018-06-27-10", self.indexer._index_name({"key": "asgard.app.infra.asgard.logs.counts"}))
-        self.assertEqual("asgard-app-logs-infra-asgard-logs-counts-2018-06-27-10", self.indexer._index_name({"key": "errors.asgard.app.infra.asgard.logs.counts"}))
+        self.assertEqual("asgard-app-logs-infra-asgard-logs-counts-2018-06-27-13", self.indexer._index_name({"key": "asgard.app.infra.asgard.logs.counts"}))
+        self.assertEqual("asgard-app-logs-infra-asgard-logs-counts-2018-06-27-13", self.indexer._index_name({"key": "errors.asgard.app.infra.asgard.logs.counts"}))
 
     def test_prepare_indexed_document_log_parse_ok(self):
         """
