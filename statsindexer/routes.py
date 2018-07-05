@@ -12,4 +12,6 @@ indexer = StatsIndexer(conf.elasticsearch, conf.logger)
 
 @app.route(conf.STATS_QUEUE_NAMES, vhost=conf.STATS_RABBITMQ_VHOST, options = {Options.BULK_SIZE: conf.STATS_BULK_SIZE})
 async def app_stats_indexer_handler(messages):
+    # Quando o aiologger permitir lazyinit do JsonLogger, poderemos tirar essa linha
+    indexer.logger = conf.logger
     await indexer.bulk(messages)

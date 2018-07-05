@@ -41,3 +41,13 @@ class StatsIndexerRoutesTest(asynctest.TestCase):
             self.assertEqual("myvhost", routes.app.routes_registry[routes.app_stats_indexer_handler]['options']['vhost'])
             self.assertEqual(64, routes.app.routes_registry[routes.app_stats_indexer_handler]['options']['bulk_size'])
 
+
+    async def test_sets_logger_on_indexer(self):
+        with mock.patch.object(routes.indexer, "bulk", mock.CoroutineMock()):
+            logger_mock = mock.CoroutineMock()
+            self.assertIsNone(routes.indexer.logger)
+            messages = [mock.CoroutineMock()]
+            conf.logger = logger_mock
+            await routes.app_stats_indexer_handler(messages)
+            self.assertEqual(logger_mock, routes.indexer.logger)
+

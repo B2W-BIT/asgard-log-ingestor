@@ -12,4 +12,5 @@ indexer = AppIndexer(conf.elasticsearch, conf.logger)
 
 @app.route(conf.LOGS_QUEUE_NAMES, vhost=conf.RABBITMQ_VHOST, options = {Options.BULK_SIZE: conf.LOGS_BULK_SIZE})
 async def generic_app_log_indexer(messages):
+    indexer.logger = conf.logger
     await indexer.bulk(messages)
