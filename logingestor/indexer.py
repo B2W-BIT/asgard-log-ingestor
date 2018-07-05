@@ -1,21 +1,39 @@
+from typing import List
 from datetime import datetime, timezone, timedelta
 
-from logingestor import conf
+from asyncworker.rabbitmq.message import RabbitMQMessage
 
 class Indexer:
 
-    def __init__(self, elasticsearch):
+    def __init__(self, elasticsearch, logger):
         self.elasticsearch = elasticsearch
+        self.logger = logger
 
     async def index(self, document):
         pass
 
-    async def bulk(self, documents):
+    async def bulk(self, documents: List[RabbitMQMessage]):
+        should_log_error = True
+        total_messages = len(documents)
+        rejected = 0
+        accepted = total_messages
+
         _bulk = []
         for doc in documents:
-            _bulk.append({ "index" : { "_index" : self._index_name(doc), "_type" : "logs"}})
-            _bulk.append(self._prepare_document(doc))
-        return await self.elasticsearch.bulk(_bulk)
+            _bulk.append({ "index" : { "_index" : self._index_name(doc.body), "_type" : "logs"}})
+            _bulk.append(self._prepare_document(doc.body))
+        result = await self.elasticsearch.bulk(_bulk)
+
+        if result["errors"]:
+            for idx, item in enumerate(result['items']):
+                if item['index'].get("error"):
+                    documents[idx].reject()
+                    #rejected += 1
+                    if should_log_error:
+                        await self.logger.error({**item['index']['error'], "original-message": documents[idx].body})
+                        should_log_error = False #Logamos apenas um erro por batch
+        await self.logger.info({"messages-processed": total_messages, "accepted-messages": accepted - rejected, "rejected": rejected, "errors": result['errors']})
+        return result
 
     def _prepare_document(self, document):
         return document
