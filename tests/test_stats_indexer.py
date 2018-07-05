@@ -9,7 +9,7 @@ class StatsIndexerTest(asynctest.TestCase):
 
     def setUp(self):
         self.elasticsearch_mock = CoroutineMock(index=CoroutineMock(), bulk=CoroutineMock())
-        self.indexer = StatsIndexer(self.elasticsearch_mock)
+        self.indexer = StatsIndexer(self.elasticsearch_mock, CoroutineMock())
 
     @freeze_time("2018-06-27T10:00:00-03:00")
     def test_test_generate_correct_index_name(self):

@@ -11,7 +11,7 @@ class LogIndexerTest(asynctest.TestCase):
 
     def setUp(self):
         self.elasticsearch_mock = CoroutineMock(index=CoroutineMock(), bulk=CoroutineMock())
-        self.indexer = AppIndexer(self.elasticsearch_mock)
+        self.indexer = AppIndexer(self.elasticsearch_mock, CoroutineMock())
         self.logmessage_parse_ok = json.loads(
         """
             {
