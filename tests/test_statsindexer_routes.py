@@ -41,3 +41,6 @@ class StatsIndexerRoutesTest(asynctest.TestCase):
             self.assertEqual("myuser", routes.app.user)
             self.assertEqual("secret", routes.app.password)
             self.assertEqual(1024, routes.app.prefetch_count)
+            self.assertEqual("myvhost", routes.app.routes_registry[routes.app_stats_indexer_handler]['options']['vhost'])
+            self.assertEqual(64, routes.app.routes_registry[routes.app_stats_indexer_handler]['options']['bulk_size'])
+
