@@ -14,7 +14,7 @@ class StatsIndexerTest(asynctest.TestCase):
     @freeze_time("2018-06-27T10:00:00-03:00")
     def test_test_generate_correct_index_name(self):
         """
-        Index name: asgard-app-logs-<namespace>-<appname>
+        Index name: asgard-app-stats-<namespace>-<appname>
         Trocamos "/" por "-"
         Sempre geramos parte da data no nome do índice usanto UTC.
         """
