@@ -196,8 +196,8 @@ class BaseIndexerTest(asynctest.TestCase):
 
     async def test_rejects_some_messages_if_elastic_search_returns_some_errors(self):
         messages = [
-            RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "value"}}, delivery_tag=10),
-            RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "other-value"}}, delivery_tag=11),
+            CoroutineMock(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "value"}}, delivery_tag=10),
+            CoroutineMock(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "other-value"}}, delivery_tag=11),
         ]
         self.elasticsearch_mock.bulk.return_value = {
                "took": 30,
@@ -236,5 +236,5 @@ class BaseIndexerTest(asynctest.TestCase):
             }
 
         await self.indexer.bulk(messages)
-        self.assertTrue(messages[1]._do_ack)
-        self.assertFalse(messages[0]._do_ack)
+        messages[0].reject.assert_called()
+        messages[1].reject.assert_not_called()
