@@ -12,14 +12,17 @@ from logingestor import routes
 class RoutesTest(asynctest.TestCase):
 
     async def test_calls_index_bulk_passing_received_message_objects(self):
+        logger_function_mock = mock.CoroutineMock()
         indexer_bulk_mock = mock.CoroutineMock()
-        with mock.patch.object(routes.indexer, "bulk", indexer_bulk_mock):
+        with mock.patch.object(routes.indexer, "bulk", indexer_bulk_mock), \
+                mock.patch.object(routes, "logger_function", logger_function_mock):
             messages = [
                 RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "value"}}, delivery_tag=10),
                 RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "other-value"}}, delivery_tag=11),
             ]
             await routes.generic_app_log_indexer(messages)
             self.assertEqual(messages, list(indexer_bulk_mock.await_args_list[0][0][0]))
+            logger_function_mock.assert_awaited_with(2, "processing-time", mock.ANY)
 
     async def test_app_uses_right_configs(self):
 
@@ -41,12 +44,15 @@ class RoutesTest(asynctest.TestCase):
             self.assertEqual(64, routes.app.routes_registry[routes.generic_app_log_indexer]['options']['bulk_size'])
 
     async def test_sets_logger_on_indexer(self):
-        with mock.patch.object(routes.indexer, "bulk", mock.CoroutineMock()):
+        logger_function_mock = mock.CoroutineMock()
+        with mock.patch.object(routes.indexer, "bulk", mock.CoroutineMock()), \
+                mock.patch.object(routes, "logger_function", logger_function_mock):
             logger_mock = mock.CoroutineMock()
             self.assertIsNone(routes.indexer.logger)
             messages = [mock.CoroutineMock()]
             conf.logger = logger_mock
             await routes.generic_app_log_indexer(messages)
             self.assertEqual(logger_mock, routes.indexer.logger)
+            logger_function_mock.assert_awaited_with(1, "processing-time", mock.ANY)
 
 
