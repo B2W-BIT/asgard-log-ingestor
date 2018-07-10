@@ -1,10 +1,12 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from logingestor.indexer import Indexer
 
 class StatsIndexer(Indexer):
 
     def _prepare_document(self, document):
+        original_timestamp = datetime.utcfromtimestamp(document['timestamp']).replace(tzinfo=timezone.utc)
+        document['timestamp'] = original_timestamp.isoformat()
         return document
 
     def _index_name(self, document):

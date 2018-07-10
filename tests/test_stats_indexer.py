@@ -1,5 +1,5 @@
 import asynctest
-from asynctest.mock import CoroutineMock
+from asynctest.mock import CoroutineMock, ANY
 from freezegun import freeze_time
 
 from statsindexer.indexer import StatsIndexer
@@ -22,6 +22,12 @@ class StatsIndexerTest(asynctest.TestCase):
         self.assertEqual("asgard-app-stats-2018-06-27-13", self.indexer._index_name({"appname": "/dev/other/app-with-dashes"}))
 
     async def test_prepare_document_returns_same_document(self):
-        document = {"some-key": "some-value", "appname": "/dev/foo"}
+        document = {"some-key": "some-value", "appname": "/dev/foo", "timestamp": 1531222358}
         expected_document = self.indexer._prepare_document(document)
+        expected_document['timestamp'] = ANY
         self.assertEqual(expected_document, document)
+
+    async def test_prepare_document_format_timestamp(self):
+        document = {"some-key": "some-value", "appname": "/dev/foo", "timestamp": 1531223488}
+        expected_document = self.indexer._prepare_document(document)
+        self.assertEqual(expected_document['timestamp'], "2018-07-10T11:51:28+00:00")
