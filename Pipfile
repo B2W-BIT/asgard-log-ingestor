@@ -5,7 +5,7 @@ name = "pypi"
 
 [packages]
 aiologger = "==0.1.0-rc4"
-async-worker = "==0.2.0-rc1"
+async-worker = "==0.2.1-rc2"
 asgard-api-sdk = "==0.3.0-rc1"
 aioelasticsearch = "==0.5.2"
 
