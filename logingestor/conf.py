@@ -31,3 +31,11 @@ RABBITMQ_PREFETCH = int(os.getenv("LOGS_RABBITMQ_PREFETCH", 32))
 RABBITMQ_VHOST = os.getenv("LOGS_RABBITMQ_VHOST", "/")
 LOGS_QUEUE_NAMES = [item.strip() for item in os.getenv("LOGS_QUEUE_NAMES", "").split(",")]
 LOGS_BULK_SIZE = int(os.getenv("LOGS_BULK_SIZE", 1))
+
+STATS_RABBITMQ_HOST = os.getenv("STATS_RABBITMQ_HOST", "127.0.0.1")
+STATS_RABBITMQ_USER = os.getenv("STATS_RABBITMQ_USER", "guest")
+STATS_RABBITMQ_PWD = os.getenv("STATS_RABBITMQ_PWD", "guest")
+STATS_RABBITMQ_PREFETCH = int(os.getenv("STATS_RABBITMQ_PREFETCH", 32))
+STATS_RABBITMQ_VHOST = os.getenv("STATS_RABBITMQ_VHOST", "/")
+STATS_QUEUE_NAMES = [item.strip() for item in os.getenv("STATS_QUEUE_NAMES", "").split(",")]
+STATS_BULK_SIZE = int(os.getenv("STATS_BULK_SIZE", 1))
