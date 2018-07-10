@@ -8,6 +8,5 @@ class StatsIndexer(Indexer):
         return document
 
     def _index_name(self, document):
-        appname = document["appname"].replace("/", "", 1).replace("/", "-")
         data_part = datetime.utcnow().strftime("%Y-%m-%d-%H")
-        return f"asgard-app-stats-{appname}-{data_part}"
+        return f"asgard-app-stats-{data_part}"

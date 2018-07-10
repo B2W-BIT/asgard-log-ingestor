@@ -18,8 +18,8 @@ class StatsIndexerTest(asynctest.TestCase):
         Trocamos "/" por "-"
         Sempre geramos parte da data no nome do índice usanto UTC.
         """
-        self.assertEqual("asgard-app-stats-infra-app-in-some-inner-folder-2018-06-27-13", self.indexer._index_name({"appname": "/infra/app/in/some/inner/folder"}))
-        self.assertEqual("asgard-app-stats-dev-other-app-with-dashes-2018-06-27-13", self.indexer._index_name({"appname": "/dev/other/app-with-dashes"}))
+        self.assertEqual("asgard-app-stats-2018-06-27-13", self.indexer._index_name({"appname": "/infra/app/in/some/inner/folder"}))
+        self.assertEqual("asgard-app-stats-2018-06-27-13", self.indexer._index_name({"appname": "/dev/other/app-with-dashes"}))
 
     async def test_prepare_document_returns_same_document(self):
         document = {"some-key": "some-value", "appname": "/dev/foo"}
