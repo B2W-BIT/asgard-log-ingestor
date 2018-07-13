@@ -8,6 +8,10 @@ from asyncworker.utils import Timeit, TimeitCallback
 from logingestor import conf
 from logingestor.indexer import AppIndexer
 
+import logging
+
+logging.getLogger('elasticsearch').setLevel(100)
+
 app = App(host=conf.RABBITMQ_HOST, user=conf.RABBITMQ_USER, password=conf.RABBITMQ_PWD, prefetch_count=conf.RABBITMQ_PREFETCH)
 
 indexer = AppIndexer(conf.elasticsearch, conf.logger)
