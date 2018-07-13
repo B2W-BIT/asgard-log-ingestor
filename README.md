@@ -53,6 +53,7 @@ Essas são as envs que o cóidigo precisa para rodar:
 ### Envs comuns aos projetos
 
 * ASGARD_LOGINGESTOR_LOGLEVEL: Log level que o código usará em seus logs: Valores possíveis são os levels do Python: "INFO", "ERROR", ...
+* INDEXER_BULK_INSERT_TIMEOUT: Timeout máximo nas comunicações de bulk insert do elasticsearch
 
 ## Trabalhos futuros
 
