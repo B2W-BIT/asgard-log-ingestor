@@ -8,6 +8,8 @@ from freezegun import freeze_time
 from logingestor.indexer import Indexer
 from asyncworker.rabbitmq.message import RabbitMQMessage
 
+from logingestor import conf
+
 class BaseIndexerTest(asynctest.TestCase):
 
     def setUp(self):
@@ -18,38 +20,6 @@ class BaseIndexerTest(asynctest.TestCase):
 
         self.logger_mock = mock.CoroutineMock(info=mock.CoroutineMock(), error=mock.CoroutineMock())
         self.indexer = MyIndexer(self.elasticsearch_mock, self.logger_mock)
-        self.logmessage_parse_ok = json.loads(
-        """
-            {
-               "timestamp" : 1529609166,
-               "payload" : {
-                  "file_path" : "/opt/app/countsingestor/indexer.py",
-                  "logged_at" : "2018-06-21T19:26:06.648610+00:00",
-                  "level" : "INFO",
-                  "line_number" : 37,
-                  "index-time" : 0,
-                  "function" : "index",
-                  "count-type" : "OK"
-               },
-               "key" : "asgard.app.infra.asgard.logs.counts"
-            }
-
-        """)
-        self.logmessage_parse_error = json.loads(
-        """
-            {
-               "key" : "errors.asgard.app.sieve.captura.kirby.powerup",
-               "payload" : {
-                  "fluentd_tag" : "asgard.app.sieve.captura.kirby.powerup",
-                  "log" : "  File /usr/local/lib/python3.6/site-packages/aioamqp/protocol.py, line 235, in get_frame",
-                  "container_id" : "d1b2c3ef17f86a3e5b6b16b4b6a566310f133ec399d9666ddcf003da0bfa9c77",
-                  "container_name" : "/mesos-d7bf305c-2e34-4597-b5dc-e1cb3144c6b9",
-                  "source" : "stderr",
-                  "parse_error" : "true"
-               },
-               "timestamp" : 1530108596
-            }
-        """)
 
     async def tearDown(self):
         mock.patch.stopall()
@@ -93,12 +63,24 @@ class BaseIndexerTest(asynctest.TestCase):
 
         self.elasticsearch_mock.bulk.return_value = {"errors": False}
         indexer = MyIndexer(self.elasticsearch_mock, self.logger_mock)
-        returned_by_elasticsearch = await indexer.bulk([CoroutineMock(body={"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10})])
+        with mock.patch.object(conf, "BULK_INSERT_TIMEOUT", 60):
+            returned_by_elasticsearch = await indexer.bulk([CoroutineMock(body={"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10})])
+            self.assertEqual([mock.call([
+                { "index" : { "_index" : "my-important-index", "_type" : "logs"}},
+                {"some-value": 10, "new-key": 42},
+            ], request_timeout=conf.BULK_INSERT_TIMEOUT)], self.elasticsearch_mock.bulk.await_args_list)
+            self.assertEqual({"errors": False}, returned_by_elasticsearch)
+
+    async def test_confirms_bulk_insert_uses_timeout_config(self):
+        class MyOtherIndexer(Indexer):
+            def _index_name(self, document):
+                return "my-important-index"
+
+        indexer = MyOtherIndexer(self.elasticsearch_mock, self.logger_mock)
+        await indexer.bulk([CoroutineMock(body={"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10})])
         self.assertEqual([mock.call([
             { "index" : { "_index" : "my-important-index", "_type" : "logs"}},
-            {"some-value": 10, "new-key": 42},
-        ])], self.elasticsearch_mock.bulk.await_args_list)
-        self.assertEqual({"errors": False}, returned_by_elasticsearch)
+            {"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10}], request_timeout=conf.BULK_INSERT_TIMEOUT)], self.elasticsearch_mock.bulk.await_args_list)
 
     async def test_confirms_default_prepare_document_implementation(self):
         class MyOtherIndexer(Indexer):
@@ -110,7 +92,7 @@ class BaseIndexerTest(asynctest.TestCase):
         self.assertEqual([mock.call([
             { "index" : { "_index" : "my-important-index", "_type" : "logs"}},
             {"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10},
-        ])], self.elasticsearch_mock.bulk.await_args_list)
+        ], request_timeout=conf.BULK_INSERT_TIMEOUT)], self.elasticsearch_mock.bulk.await_args_list)
 
     async def test_if_result_does_not_have_errors_dont_iterate_it(self):
         """
