@@ -2,6 +2,7 @@ from typing import List
 from datetime import datetime, timezone, timedelta
 
 from asyncworker.rabbitmq.message import RabbitMQMessage
+from logingestor import conf
 
 class Indexer:
 
@@ -22,7 +23,7 @@ class Indexer:
         for doc in documents:
             _bulk.append({ "index" : { "_index" : self._index_name(doc.body), "_type" : "logs"}})
             _bulk.append(self._prepare_document(doc.body))
-        result = await self.elasticsearch.bulk(_bulk)
+        result = await self.elasticsearch.bulk(_bulk, request_timeout=conf.BULK_INSERT_TIMEOUT)
 
         if result["errors"]:
             for idx, item in enumerate(result['items']):

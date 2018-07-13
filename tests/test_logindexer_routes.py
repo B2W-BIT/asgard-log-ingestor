@@ -22,7 +22,7 @@ class RoutesTest(asynctest.TestCase):
             ]
             await routes.generic_app_log_indexer(messages)
             self.assertEqual(messages, list(indexer_bulk_mock.await_args_list[0][0][0]))
-            logger_function_mock.assert_awaited_with(2, "processing-time", mock.ANY)
+            logger_function_mock.assert_awaited_with(2, "processing-time", mock.ANY, mock.ANY, mock.ANY, mock.ANY)
 
     async def test_app_uses_right_configs(self):
 
@@ -53,6 +53,6 @@ class RoutesTest(asynctest.TestCase):
             conf.logger = logger_mock
             await routes.generic_app_log_indexer(messages)
             self.assertEqual(logger_mock, routes.indexer.logger)
-            logger_function_mock.assert_awaited_with(1, "processing-time", mock.ANY)
+            logger_function_mock.assert_awaited_with(1, "processing-time", mock.ANY, mock.ANY, mock.ANY, mock.ANY)
 
 
