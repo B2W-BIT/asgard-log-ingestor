@@ -7,6 +7,13 @@ from asynctest import mock
 from logingestor import conf
 
 
+class CommonConfTest(asynctest.TestCase):
+
+    def test_load_bulk_timeout_as_integer(self):
+        with mock.patch.dict(os.environ, INDEXER_BULK_INSERT_TIMEOUT="60"):
+            importlib.reload(conf)
+            self.assertEqual(60, conf.BULK_INSERT_TIMEOUT)
+
 class StatsIndexerConfTest(asynctest.TestCase):
 
     def test_test_read_correct_configs(self):

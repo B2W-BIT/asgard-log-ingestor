@@ -21,6 +21,7 @@ loop = asyncio.get_event_loop()
 init_logger_task = loop.create_task(init_logger())
 
 ELASTIC_SEARCH_ADDRESSES = get_option("ELASTICSEARCH", "ADDRESS")
+BULK_INSERT_TIMEOUT = int(os.getenv("INDEXER_BULK_INSERT_TIMEOUT", "30"))
 
 elasticsearch = Elasticsearch(hosts=ELASTIC_SEARCH_ADDRESSES)
 
