@@ -22,4 +22,5 @@ indexer = FluentdMonitoringIndexer(conf.elasticsearch, conf.logger)
 
 @app.route(conf.FLUENTD_INDEXER_QUEUE_NAMES, vhost=conf.FLUENTD_INDEXER_RABBITMQ_VHOST, options = {Options.BULK_SIZE: conf.FLUENTD_INDEXER_BULK_SIZE})
 async def fluentd_monitoring_events_indexer(messages):
+    indexer.logger = conf.logger
     await indexer.bulk(messages)
