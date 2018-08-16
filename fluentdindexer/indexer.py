@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from logingestor.indexer import Indexer
 
@@ -9,8 +9,9 @@ class  FluentdMonitoringIndexer(Indexer):
         return f"asgard-fluentd-monitoring-{data_part}"
 
     def _prepare_document(self, document):
+        original_timestamp = datetime.utcfromtimestamp(document['timestamp']).replace(tzinfo=timezone.utc)
         return {
             **document.get("payload", {}),
             "key": document["key"],
-            "timestamp": document["timestamp"]
+            "timestamp": original_timestamp.isoformat()
         }

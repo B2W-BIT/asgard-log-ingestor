@@ -39,7 +39,6 @@ class FluentdMonitoringIndexerTest(asynctest.TestCase):
         }
 
         prepared_document = self.indexer._prepare_document(document)
-        prepared_document['timestamp'] = ANY
         self.assertEqual(expected_document, prepared_document)
         self.assertEqual(expected_document['timestamp'], "2018-07-10T11:51:28+00:00")
 
