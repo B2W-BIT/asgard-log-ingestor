@@ -68,3 +68,4 @@ debug.log
 
 # Chef environements
 /compose/*.env
+.pytest_cache/

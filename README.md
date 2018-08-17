@@ -16,13 +16,19 @@ Esse código serve para apps que não precisam de nenhum tratamento nos logs, ou
 
 Para rodar o log ingestor
 ```
-$ python -m logsingestor
+$ pipenv run python -m logsingestor
 ```
 
 Para rodar o indexador de estatísticas de CPU/RAM
 
 ```
-$ python -m statsindexer
+$ pipenv run python -m statsindexer
+```
+
+Para rodar o indexador de eventos de monitoring do fluentd
+
+```
+$ pypenv run python -m fluentdindexer
 ```
 
 
@@ -49,6 +55,16 @@ Essas são as envs que o cóidigo precisa para rodar:
 * STATS_RABBITMQ_VHOST 
 * STATS_QUEUE_NAMES
 * STATS_BULK_SIZE 
+
+### Para o indexador de evetnos de monitoring do fluentd
+
+* FLUENTD_INDEXER_RABBITMQ_HOST
+* FLUENTD_INDEXER_RABBITMQ_USER
+* FLUENTD_INDEXER_RABBITMQ_PWD
+* FLUENTD_INDEXER_RABBITMQ_PREFETCH
+* FLUENTD_INDEXER_RABBITMQ_VHOST 
+* FLUENTD_INDEXER_QUEUE_NAMES
+* FLUENTD_INDEXER_BULK_SIZE 
 
 ### Envs comuns aos projetos
 
