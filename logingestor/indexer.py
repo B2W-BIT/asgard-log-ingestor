@@ -29,7 +29,7 @@ class Indexer:
             for idx, item in enumerate(result['items']):
                 if item['index'].get("error"):
                     documents[idx].reject()
-                    #rejected += 1
+                    rejected += 1
                     if should_log_error:
                         await self.logger.error({**item['index']['error'], "original-message": documents[idx].body})
                         should_log_error = False #Logamos apenas um erro por batch
