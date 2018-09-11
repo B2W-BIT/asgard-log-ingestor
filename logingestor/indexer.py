@@ -1,3 +1,4 @@
+import json
 from typing import List
 from datetime import datetime, timezone, timedelta
 
@@ -31,7 +32,7 @@ class Indexer:
                     documents[idx].reject()
                     rejected += 1
                     if should_log_error:
-                        await self.logger.error({**item['index']['error'], "original-message": documents[idx].body})
+                        await self.logger.error({**item['index']['error'], "original-message-str": json.dumps(documents[idx].body['payload'])})
                         should_log_error = False #Logamos apenas um erro por batch
         await self.logger.info({"messages-processed": total_messages, "accepted-messages": accepted - rejected, "rejected": rejected, "errors": result['errors']})
         return result
