@@ -21,7 +21,6 @@ async def logger_function(total_messages, name, elapsed_time, *args, **kwargs):
 
 @app.route(conf.LOGS_QUEUE_NAMES, vhost=conf.RABBITMQ_VHOST, options = {Options.BULK_SIZE: conf.LOGS_BULK_SIZE})
 async def generic_app_log_indexer(messages):
-    indexer.logger = conf.logger
     logger_partial = partial(logger_function, len(messages))
     async with Timeit(name="processing-time", callback=logger_partial):
         await indexer.bulk(messages)

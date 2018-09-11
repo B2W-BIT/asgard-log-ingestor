@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-aiologger = "==0.1.0-rc4"
+aiologger = "==0.1.1-rc1"
 async-worker = "==0.2.1-rc2"
 asgard-api-sdk = "==0.3.0-rc1"
 aioelasticsearch = "==0.5.2"
@@ -12,7 +12,7 @@ aioelasticsearch = "==0.5.2"
 [dev-packages]
 ipdb = "==0.11"
 freezegun = "==0.3.10"
-pytest = "==3.6.2"
+pytest = "==3.8.0"
 pytest-coverage = "*"
 asynctest = "==0.12.2"
 codecov = "*"

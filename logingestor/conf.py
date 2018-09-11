@@ -11,14 +11,7 @@ from aiologger.loggers.json import JsonLogger
 LOGLEVEL_CONF = os.getenv("ASGARD_LOGINGESTOR_LOGLEVEL", "INFO")
 loglevel = getattr(logging, LOGLEVEL_CONF, logging.INFO)
 
-logger = None
-
-async def init_logger():
-    global logger
-    logger = await JsonLogger.with_default_handlers(level=loglevel, flatten=True)
-
-loop = asyncio.get_event_loop()
-init_logger_task = loop.create_task(init_logger())
+logger = JsonLogger.with_default_handlers(level=loglevel, flatten=True)
 
 ELASTIC_SEARCH_ADDRESSES = get_option("ELASTICSEARCH", "ADDRESS")
 BULK_INSERT_TIMEOUT = int(os.getenv("INDEXER_BULK_INSERT_TIMEOUT", "30"))
