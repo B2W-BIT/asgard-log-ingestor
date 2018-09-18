@@ -1,7 +1,7 @@
 FROM python:3.6.5-alpine
 
 #Tag: sieve/infra/asgard-log-ingestor
-#Version: 0.4.0
+#Version: 0.5.0-rc2
 
 WORKDIR /opt/app
 
@@ -10,6 +10,8 @@ RUN pip install -U pip \
 
 COPY . /opt/app
 
-RUN pipenv install --system --deploy --ignore-pipfile
+RUN apk -U add --virtual .deps gcc g++ make python3-dev \
+&& pipenv install --system --deploy --ignore-pipfile \
+&& apk --purge del .deps
 
 CMD ["python", "-m", "logingestor"]

@@ -45,17 +45,3 @@ class RoutesTest(asynctest.TestCase):
             self.assertEqual("myvhost", routes.app.routes_registry[routes.generic_app_log_indexer]['options']['vhost'])
             self.assertEqual(64, routes.app.routes_registry[routes.generic_app_log_indexer]['options']['bulk_size'])
 
-    async def test_sets_logger_on_indexer(self):
-        logger_function_mock = mock.CoroutineMock()
-        with mock.patch.object(routes.indexer, "bulk", mock.CoroutineMock()), \
-                mock.patch.object(routes, "logger_function", logger_function_mock):
-            logger_mock = mock.CoroutineMock()
-            self.assertIsNone(routes.indexer.logger)
-            messages = [mock.CoroutineMock()]
-            conf.logger = logger_mock
-            await routes.generic_app_log_indexer(messages)
-            self.assertEqual(logger_mock, routes.indexer.logger)
-            positional_arguments_of_first_call = logger_function_mock.await_args_list[0][0]
-            self.assertEqual((1, "processing-time", mock.ANY), positional_arguments_of_first_call[:3])
-
-

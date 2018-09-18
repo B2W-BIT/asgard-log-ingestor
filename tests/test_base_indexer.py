@@ -163,7 +163,9 @@ class BaseIndexerTest(asynctest.TestCase):
          }
         await self.indexer.bulk(messages)
         self.assertEqual(1, self.logger_mock.error.await_count)
-        self.assertEqual("value", self.logger_mock.error.await_args_list[0][0][0]['original-message']['payload']['field'])
+        self.assertEqual('{"field": "value"}', self.logger_mock.error.await_args_list[0][0][0]['original-message-str'])
+        self.assertEqual(1, self.logger_mock.info.await_count)
+        self.assertEqual(2, self.logger_mock.info.await_args_list[0][0][0]['rejected'])
 
     async def test_log_one_message_per_batch_processed(self):
         indexer_bulk_mock = mock.CoroutineMock()
