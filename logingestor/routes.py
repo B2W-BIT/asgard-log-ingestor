@@ -10,7 +10,7 @@ from logingestor.indexer import AppIndexer
 
 import logging
 
-logging.getLogger('elasticsearch').setLevel(100)
+logging.getLogger('elasticsearch').setLevel(logging.NOTSET)
 
 app = App(host=conf.RABBITMQ_HOST, user=conf.RABBITMQ_USER, password=conf.RABBITMQ_PWD, prefetch_count=conf.RABBITMQ_PREFETCH)
 

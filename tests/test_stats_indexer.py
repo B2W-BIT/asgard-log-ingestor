@@ -1,6 +1,9 @@
+from importlib import reload
+import os
 import asynctest
-from asynctest.mock import CoroutineMock, ANY
+from asynctest.mock import CoroutineMock, ANY, patch
 from freezegun import freeze_time
+from logingestor import conf
 
 from statsindexer.indexer import StatsIndexer
 
@@ -18,8 +21,10 @@ class StatsIndexerTest(asynctest.TestCase):
         Trocamos "/" por "-"
         Sempre geramos parte da data no nome do índice usanto UTC.
         """
-        self.assertEqual("asgard-app-stats-2018-06-27-13", self.indexer._index_name({"appname": "/infra/app/in/some/inner/folder"}))
-        self.assertEqual("asgard-app-stats-2018-06-27-13", self.indexer._index_name({"appname": "/dev/other/app-with-dashes"}))
+        with patch.dict(os.environ, STATS_INDEX_PREFIX="asgard-app-stats-index"):
+            reload(conf)
+            self.assertEqual("asgard-app-stats-index-2018-06-27-13", self.indexer._index_name({"appname": "/infra/app/in/some/inner/folder"}))
+            self.assertEqual("asgard-app-stats-index-2018-06-27-13", self.indexer._index_name({"appname": "/dev/other/app-with-dashes"}))
 
     async def test_prepare_document_returns_same_document(self):
         document = {"some-key": "some-value", "appname": "/dev/foo", "timestamp": 1531222358}
