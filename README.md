@@ -55,6 +55,7 @@ Essas são as envs que o cóidigo precisa para rodar:
 * STATS_RABBITMQ_VHOST 
 * STATS_QUEUE_NAMES
 * STATS_BULK_SIZE 
+* STATS_INDEX_PREFIX: O íncide no ES terá o nome fomrado por: {STATS_INDEX_PREFIX}-{DATA}
 
 ### Para o indexador de evetnos de monitoring do fluentd
 

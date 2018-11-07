@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from logingestor.indexer import Indexer
+from logingestor import conf
 
 class StatsIndexer(Indexer):
 
@@ -11,4 +12,4 @@ class StatsIndexer(Indexer):
 
     def _index_name(self, document):
         data_part = datetime.utcnow().strftime("%Y-%m-%d-%H")
-        return f"asgard-app-stats-{data_part}"
+        return f"{conf.STATS_INDEX_PREFIX}-{data_part}"

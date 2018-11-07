@@ -27,7 +27,8 @@ class StatsIndexerConfTest(asynctest.TestCase):
                         STATS_RABBITMQ_VHOST="myvhost",
                         STATS_RABBITMQ_PREFETCH="1024",
                         STATS_BULK_SIZE="64",
-                        STATS_QUEUE_NAMES="asgard/counts, asgard/counts/errors,  asgard/other   "):
+                        STATS_QUEUE_NAMES="asgard/counts, asgard/counts/errors,  asgard/other   ",
+                        STATS_INDEX_PREFIX="asgard-app-stats-indexer"):
             importlib.reload(conf)
             self.assertEqual("10.0.0.42", conf.STATS_RABBITMQ_HOST)
             self.assertEqual("myuser", conf.STATS_RABBITMQ_USER)
@@ -36,3 +37,4 @@ class StatsIndexerConfTest(asynctest.TestCase):
             self.assertEqual(1024, conf.STATS_RABBITMQ_PREFETCH)
             self.assertEqual(64, conf.STATS_BULK_SIZE)
             self.assertEqual(["asgard/counts", "asgard/counts/errors", "asgard/other"], conf.STATS_QUEUE_NAMES)
+            self.assertEqual("asgard-app-stats-indexer", conf.STATS_INDEX_PREFIX)
