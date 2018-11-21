@@ -5,6 +5,7 @@ from asynctest import mock
 import asynctest
 
 from asyncworker.rabbitmq.message import RabbitMQMessage
+from asyncworker.options import Options
 
 from fluentdindexer import routes
 from logingestor import conf
@@ -37,7 +38,7 @@ class FluentdMonitoringIndexerRoutesTest(asynctest.TestCase):
             self.assertEqual("myuser", routes.app.user)
             self.assertEqual("secret", routes.app.password)
             self.assertEqual(1024, routes.app.prefetch_count)
-            self.assertEqual("myvhost", routes.app.routes_registry[routes.fluentd_monitoring_events_indexer]['options']['vhost'])
-            self.assertEqual(64, routes.app.routes_registry[routes.fluentd_monitoring_events_indexer]['options']['bulk_size'])
-            self.assertEqual(["fluentd.internal.monitoring"], routes.app.routes_registry[routes.fluentd_monitoring_events_indexer]['route'])
+            self.assertEqual("myvhost", routes.app.routes_registry[routes.fluentd_monitoring_events_indexer]['vhost'])
+            self.assertEqual(64, routes.app.routes_registry[routes.fluentd_monitoring_events_indexer]['options'][Options.BULK_SIZE])
+            self.assertEqual(["fluentd.internal.monitoring"], routes.app.routes_registry[routes.fluentd_monitoring_events_indexer]['routes'])
 
