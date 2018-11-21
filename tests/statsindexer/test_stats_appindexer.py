@@ -1,11 +1,16 @@
 from importlib import reload
 import os
 import asynctest
+from aiohttp.test_utils import TestClient, TestServer
+import asyncio
+
 from asynctest.mock import CoroutineMock, ANY, patch
 from freezegun import freeze_time
 from logingestor import conf
+from asyncworker.signals.handlers.http import HTTPServer
 
 from statsindexer.indexer import StatsIndexer
+from statsindexer.routes import app
 
 
 class StatsIndexerTest(asynctest.TestCase):
@@ -13,6 +18,7 @@ class StatsIndexerTest(asynctest.TestCase):
     def setUp(self):
         self.elasticsearch_mock = CoroutineMock(index=CoroutineMock(), bulk=CoroutineMock())
         self.indexer = StatsIndexer(self.elasticsearch_mock, CoroutineMock())
+        self.http_server = HTTPServer()
 
     @freeze_time("2018-06-27T10:00:00-03:00")
     def test_test_generate_correct_index_name(self):
@@ -40,3 +46,30 @@ class StatsIndexerTest(asynctest.TestCase):
     async def test_extracts_appname(self):
         appname=  self.indexer._app_name_with_namespace({"appname": "/infra/app"})
         self.assertEqual("/infra/app", appname)
+
+    async def test_health_check_OK(self):
+        await self.http_server.startup(app)
+        async with TestClient(TestServer(app['http_app']), loop=asyncio.get_event_loop()) as client:
+            with patch.multiple(conf, elasticsearch=self.elasticsearch_mock):
+                self.elasticsearch_mock.ping = CoroutineMock(return_value=True)
+                resp = await client.get("/health")
+                self.assertEqual(resp.status, 200)
+                data = await resp.json()
+                self.assertDictEqual({
+                    "elasticsearch": True,
+                }, data)
+        await self.http_server.shutdown(app)
+
+    async def test_health_check_failing(self):
+        await self.http_server.startup(app)
+        async with TestClient(TestServer(app['http_app']), loop=asyncio.get_event_loop()) as client:
+            with patch.multiple(conf, elasticsearch=self.elasticsearch_mock):
+                self.elasticsearch_mock.ping = CoroutineMock(return_value=False)
+                resp = await client.get("/health")
+                self.assertEqual(resp.status, 500)
+                data = await resp.json()
+                self.assertDictEqual({
+                    "elasticsearch": False,
+                }, data)
+        await self.http_server.shutdown(app)
+
