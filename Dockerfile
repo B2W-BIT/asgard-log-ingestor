@@ -1,7 +1,7 @@
 FROM python:3.6.5-alpine
 
 #Tag: sieve/infra/asgard-log-ingestor
-#Version: 0.6.0
+#Version: 0.7.0-rc1
 
 WORKDIR /opt/app
 
