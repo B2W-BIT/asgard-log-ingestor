@@ -5,6 +5,7 @@ import asynctest
 from asynctest import mock
 
 from asyncworker.rabbitmq.message import RabbitMQMessage
+from asyncworker.options import Options
 
 from logingestor import conf
 from logingestor import routes
@@ -23,8 +24,10 @@ class RoutesTest(asynctest.TestCase):
             await routes.generic_app_log_indexer(messages)
             self.assertEqual(messages, list(indexer_bulk_mock.await_args_list[0][0][0]))
 
+            expected_logger_function_call = mock.call(2, exc_tb=None, exc_type=None, exc_val=None, transactions={'processing-time': mock.ANY})
             positional_arguments_of_first_call = logger_function_mock.await_args_list[0][0]
-            self.assertEqual((2, "processing-time", mock.ANY), positional_arguments_of_first_call[:3])
+
+            self.assertEqual([expected_logger_function_call], logger_function_mock.await_args_list)
 
     async def test_app_uses_right_configs(self):
 
@@ -42,6 +45,6 @@ class RoutesTest(asynctest.TestCase):
             self.assertEqual("myuser", routes.app.user)
             self.assertEqual("secret", routes.app.password)
             self.assertEqual(1024, routes.app.prefetch_count)
-            self.assertEqual("myvhost", routes.app.routes_registry[routes.generic_app_log_indexer]['options']['vhost'])
-            self.assertEqual(64, routes.app.routes_registry[routes.generic_app_log_indexer]['options']['bulk_size'])
+            self.assertEqual("myvhost", routes.app.routes_registry[routes.generic_app_log_indexer]['vhost'])
+            self.assertEqual(64, routes.app.routes_registry[routes.generic_app_log_indexer]['options'][Options.BULK_SIZE])
 
