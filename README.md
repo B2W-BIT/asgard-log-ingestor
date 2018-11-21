@@ -8,8 +8,9 @@ Esse código serve para apps que não precisam de nenhum tratamento nos logs, ou
 
 ## Projetos incluídos nesse repositório
 
- - asgard-log-ingestor: Indexador de logs de aplicações que rodam no Asgard;
+ - asgard-log-ingestor: Indexador de logs de aplicações que rodam no Asgard.
  - asgard-stats-indexer: Indexador de dados de uso de CPU/RAM de cada instância de cada App.
+ - fluent-indexer: Indexador dos dados de monitoramento do fluentd.
 
 
 ## Como rodar cada um dos projetos
@@ -74,7 +75,7 @@ Essas são as envs que o cóidigo precisa para rodar:
 
 ## Trabalhos futuros
 
-Esse repositório surgiu como sendo um projeto individual, mas começamos a ver que outros projetos usavam a mesma base de código, por exemplo, o bulk indexer do elasticsearch. Então começamos a juntar masi comandos nesse mesmo repositório. Separações que ainda temos que fazer:
+Esse repositório surgiu como sendo um projeto individual, mas começamos a ver que outros projetos usavam a mesma base de código, por exemplo, o bulk indexer do elasticsearch. Então começamos a juntar mais comandos nesse mesmo repositório. Separações que ainda temos que fazer:
 
 * Criar um novo módulo onde as coisas comuns podem ficar;
 * Mover o `conf.py` para a raiz, fora do módulo `logsingestor`;
