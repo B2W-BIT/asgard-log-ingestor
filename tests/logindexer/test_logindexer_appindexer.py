@@ -171,3 +171,8 @@ class LogIndexerTest(asynctest.TestCase):
             prepared_document = self.indexer._prepare_document(self.logmessage_parse_error)
             self.assertEqual(64, prepared_document['asgard_index_delay'])
 
+    async def test_extracts_appname(self):
+        self.assertEqual("/infra/apps/myapp", self.indexer._app_name_with_namespace({"key": "asgard.app.infra.apps.myapp"}))
+        self.assertEqual("/infra/otherapp/app", self.indexer._app_name_with_namespace({"key": "errors.asgard.app.infra.otherapp.app"}))
+        self.assertEqual("/fluentd/internal/monitoring", self.indexer._app_name_with_namespace({"key": "fluentd.internal.monitoring"}))
+

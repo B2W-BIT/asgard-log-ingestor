@@ -42,7 +42,7 @@ class Indexer:
                             "index_error": True,
                         },
                         "timestamp": prepared_document["timestamp"],
-                        #"appname": f"/{self._app_name_with_namespace(original_document)}",
+                        "appname": self._app_name_with_namespace(original_document.body),
                         #"asgard_index_delay": prepared_document["asgard_index_delay"]
                     }
                     _second_bulk.append(new_document)
@@ -56,19 +56,25 @@ class Indexer:
     def _index_name(self, doc):
         raise NotImplementedError
 
+    def _extract_appname(self, document):
+        raise NotImplementedError
+
+    def _app_name_with_namespace(self, document):
+        return self._extract_appname(document)
+
 
 class AppIndexer(Indexer):
 
 
-    def _app_name_with_namespace(self, document):
+    def _extract_appname(self, document):
         app_name_with_namespace = document['key'].replace("errors.", "", 1) \
                                              .replace("asgard.app.", "", 1) \
                                              .replace(".", "/")
-        return app_name_with_namespace
+        return f"/{app_name_with_namespace}"
 
 
     def _index_name(self, document):
-        app_name_with_namespace = self._app_name_with_namespace(document).replace("/", "-")
+        app_name_with_namespace = self._app_name_with_namespace(document).strip("/").replace("/", "-")
         data_part = datetime.utcnow().strftime("%Y-%m-%d-%H")
         return f"asgard-app-logs-{app_name_with_namespace}-{data_part}"
 
@@ -81,6 +87,6 @@ class AppIndexer(Indexer):
         final_document.update({
             'asgard_index_delay': processing_delay.total_seconds(),
             'timestamp': timestamp.isoformat(),
-            'appname': f"/{self._app_name_with_namespace(raw_document)}",
+            'appname': self._app_name_with_namespace(raw_document),
         })
         return final_document

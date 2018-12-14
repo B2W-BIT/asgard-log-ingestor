@@ -42,3 +42,8 @@ class FluentdMonitoringIndexerTest(asynctest.TestCase):
         self.assertEqual(expected_document, prepared_document)
         self.assertEqual(expected_document['timestamp'], "2018-07-10T11:51:28+00:00")
 
+    async def test_extracts_appname(self):
+        self.assertEqual("/infra/apps/myapp", self.indexer._app_name_with_namespace({"key": "asgard.app.infra.apps.myapp"}))
+        self.assertEqual("/infra/otherapp/app", self.indexer._app_name_with_namespace({"key": "errors.asgard.app.infra.otherapp.app"}))
+        self.assertEqual("/fluentd/internal/monitoring", self.indexer._app_name_with_namespace({"key": "fluentd.internal.monitoring"}))
+

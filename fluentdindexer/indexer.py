@@ -15,3 +15,9 @@ class  FluentdMonitoringIndexer(Indexer):
             "key": document["key"],
             "timestamp": original_timestamp.isoformat()
         }
+
+    def _extract_appname(self, document):
+        app_name_with_namespace = document['key'].replace("errors.", "", 1) \
+                                             .replace("asgard.app.", "", 1) \
+                                             .replace(".", "/")
+        return f"/{app_name_with_namespace}"

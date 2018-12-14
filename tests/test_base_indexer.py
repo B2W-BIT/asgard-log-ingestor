@@ -5,7 +5,7 @@ import json
 
 from freezegun import freeze_time
 
-from logingestor.indexer import Indexer
+from logingestor.indexer import Indexer, AppIndexer
 from asyncworker.rabbitmq.message import RabbitMQMessage
 
 from logingestor import conf
@@ -18,14 +18,22 @@ class BaseIndexerTest(asynctest.TestCase):
         class MyIndexer(Indexer):
             def _index_name(self, document):
                 return "myindex"
-            def _app_name_with_namespace(self, doc):
-                return "asgard/myapp"
+            def _extract_appname(self, doc):
+                return "/asgard/myapp"
 
         self.logger_mock = mock.CoroutineMock(info=mock.CoroutineMock(), error=mock.CoroutineMock())
         self.indexer = MyIndexer(self.elasticsearch_mock, self.logger_mock)
 
     async def tearDown(self):
         mock.patch.stopall()
+
+    async def test_call_extract_appname_when_needed(self):
+        class MyIndexer(Indexer):
+            def _extract_appname(self, document):
+                return "/infra/asgard/collector"
+
+        indexer = MyIndexer(self.elasticsearch_mock, self.logger_mock)
+        self.assertEqual("/infra/asgard/collector", indexer._app_name_with_namespace({}))
 
     async def test_calls_index_bulk_passing_received_message_bodies(self):
         """
@@ -144,8 +152,8 @@ class BaseIndexerTest(asynctest.TestCase):
         }
         """
         messages = [
-            CoroutineMock(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "value"}}, delivery_tag=10),
-            CoroutineMock(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "other-value"}}, delivery_tag=11),
+            CoroutineMock(body={"timestamp": 1530132385, "key": "asgard.app.infra.my.app", "payload": {"field": "value"}}, delivery_tag=10),
+            CoroutineMock(body={"timestamp": 1530132385, "key": "asgard.app.infra.my.app", "payload": {"field": "other-value"}}, delivery_tag=11),
         ]
         self.elasticsearch_mock.bulk.return_value = {
                "took": 30,
@@ -183,10 +191,11 @@ class BaseIndexerTest(asynctest.TestCase):
                ]
             }
 
-        await self.indexer.bulk(messages)
+        indexer = AppIndexer(self.elasticsearch_mock, self.logger_mock)
+        await indexer.bulk(messages)
         self.assertEqual(self.elasticsearch_mock.bulk.await_count, 2)
         expected_second_bulk_call = mock.call([
-            { "index" : { "_index" : self.indexer._index_name(messages[0].body), "_type" : "logs"}},
+            { "index" : { "_index" : indexer._index_name(messages[0].body), "_type" : "logs"}},
             { "asgard": {
                             "original": {
                                 "msg": json.dumps(messages[0].body['payload'])
@@ -197,7 +206,8 @@ class BaseIndexerTest(asynctest.TestCase):
                           },
                             "index_error": True,
                         },
-                        "timestamp": messages[0].body["timestamp"],
+                        "timestamp": "2018-06-27T20:46:25+00:00",
+                        "appname": "/infra/my/app",
             }
         ], request_timeout=conf.BULK_INSERT_TIMEOUT)
         self.assertEqual(expected_second_bulk_call, self.elasticsearch_mock.bulk.await_args_list[1])
