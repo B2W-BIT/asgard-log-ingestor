@@ -14,9 +14,12 @@ class BaseIndexerTest(asynctest.TestCase):
 
     def setUp(self):
         self.elasticsearch_mock = CoroutineMock(index=CoroutineMock(), bulk=CoroutineMock())
+        self.elasticsearch_mock.bulk.return_value = {"items": [], "errors": False}
         class MyIndexer(Indexer):
             def _index_name(self, document):
                 return "myindex"
+            def _app_name_with_namespace(self, doc):
+                return "asgard/myapp"
 
         self.logger_mock = mock.CoroutineMock(info=mock.CoroutineMock(), error=mock.CoroutineMock())
         self.indexer = MyIndexer(self.elasticsearch_mock, self.logger_mock)
@@ -88,7 +91,8 @@ class BaseIndexerTest(asynctest.TestCase):
                 return "my-important-index"
 
         indexer = MyOtherIndexer(self.elasticsearch_mock, self.logger_mock)
-        await indexer.bulk([CoroutineMock(body={"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10})])
+        documents = [CoroutineMock(body={"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10})]
+        await indexer.bulk(documents)
         self.assertEqual([mock.call([
             { "index" : { "_index" : "my-important-index", "_type" : "logs"}},
             {"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10},
@@ -114,71 +118,31 @@ class BaseIndexerTest(asynctest.TestCase):
             self.assertEqual(0, messages[1].reject.call_count)
             self.assertEqual(0, messages[2].reject.call_count)
 
-    async def test_only_logs_one_error_per_bulk_insert(self):
+    async def test_should_index_a_different_document_for_messages_with_index_errors(self):
         """
-        Mesmo que tenhamos mais de uma mensagem rejeitada em um mesmo bulk, logamos apenas o primeiro erro.
-        """
-        messages = [
-            RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "value"}}, delivery_tag=10),
-            RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "other-value"}}, delivery_tag=11),
-            RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "some-other-value"}}, delivery_tag=11),
-        ]
-        self.elasticsearch_mock.bulk.return_value = {
-            "took": 30,
-            "errors": True,
-            "items": [
-             {
-                "index" : {
-                   "error" : {
-                      "type" : "illegal_argument_exception",
-                      "reason" : "Cant merge a non object mapping [marketplace_sellers] with an object mapping [marketplace_sellers]"
-                   },
-                   "_type" : "logs",
-                   "_id" : "AWRDEIdY6_jLl57Ht_Gj",
-                   "status" : 400,
-                   "_index" : "asgard-app-logs-sieve-captura-wetl-updater-marketplace-2018-06-27"
-                }
-             },
+        Para documentos que o ES se recusou a indexar, geramos um novo bulk contendo
+        os documentos que causaram erro e o motivo de cada um dos erros.
+
+        O Documento é indexado no índice da app original, e tem a seguinite estrutura:
+
+        {
+          "asgard": {
+            "original": {
+              "msg": "<resultdo do json.dumps(msg_orignial)>"
+            },
+            "error": {
               {
-                "index" : {
-                   "error" : {
-                      "type" : "illegal_argument_exception",
-                      "reason" : "Cant merge a non object mapping [marketplace_sellers] with an object mapping [marketplace_sellers]"
-                   },
-                   "_type" : "logs",
-                   "_id" : "AWRDEIdY6_jLl57Ht_Gj",
-                   "status" : 400,
-                   "_index" : "asgard-app-logs-sieve-captura-wetl-updater-marketplace-2018-06-27"
+                "type": "mapper_parsing_exception",
+                "reason": "failed to parse [msg.website_id]",
+                "caused_by": {
+                  "type": "number_format_exception",
+                  "reason": "For input string: "abc""
                 }
-             },
-            {
-                "index" : {
-                   "_type" : "logs",
-                   "_id" : "AWRDEIdY6_jLl57Ht_Gj",
-                   "status" : 400,
-                   "_index" : "asgard-app-logs-sieve-captura-wetl-updater-marketplace-2018-06-27"
-                }
-             }
-            ]
-         }
-        await self.indexer.bulk(messages)
-        self.assertEqual(1, self.logger_mock.error.await_count)
-        self.assertEqual('{"field": "value"}', self.logger_mock.error.await_args_list[0][0][0]['original-message-str'])
-        self.assertEqual(1, self.logger_mock.info.await_count)
-        self.assertEqual(2, self.logger_mock.info.await_args_list[0][0][0]['rejected'])
-
-    async def test_log_one_message_per_batch_processed(self):
-        indexer_bulk_mock = mock.CoroutineMock()
-        messages = [
-            RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "value"}}, delivery_tag=10),
-            RabbitMQMessage(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "other-value"}}, delivery_tag=11),
-        ]
-        #expected_bodies = list((m.body for m in messagemsessages))
-        self.elasticsearch_mock.bulk.return_value = {"errors": False}
-        await self.indexer.bulk(messages)
-        self.assertEqual([mock.call({'messages-processed': 2, 'accepted-messages': 2, 'rejected': 0, 'errors': False})], self.logger_mock.info.await_args_list)
-
-    async def test_rejects_some_messages_if_elastic_search_returns_some_errors(self):
+              }
+            }
+          }
+        }
+        """
         messages = [
             CoroutineMock(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "value"}}, delivery_tag=10),
             CoroutineMock(body={"timestamp": 1530132385, "key": "asgard.app.my.app", "payload": {"field": "other-value"}}, delivery_tag=11),
@@ -220,5 +184,21 @@ class BaseIndexerTest(asynctest.TestCase):
             }
 
         await self.indexer.bulk(messages)
-        messages[0].reject.assert_called()
-        messages[1].reject.assert_not_called()
+        self.assertEqual(self.elasticsearch_mock.bulk.await_count, 2)
+        expected_second_bulk_call = mock.call([
+            { "index" : { "_index" : self.indexer._index_name(messages[0].body), "_type" : "logs"}},
+            { "asgard": {
+                            "original": {
+                                "msg": json.dumps(messages[0].body['payload'])
+                            },
+                            "error":  {
+                                 "type" : "illegal_argument_exception",
+                                 "reason" : "Cant merge a non object mapping [marketplace_sellers] with an object mapping [marketplace_sellers]"
+                          },
+                            "index_error": True,
+                        },
+                        "timestamp": messages[0].body["timestamp"],
+            }
+        ], request_timeout=conf.BULK_INSERT_TIMEOUT)
+        self.assertEqual(expected_second_bulk_call, self.elasticsearch_mock.bulk.await_args_list[1])
+

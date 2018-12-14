@@ -15,7 +15,6 @@ class Indexer:
         pass
 
     async def bulk(self, documents: List[RabbitMQMessage]):
-        should_log_error = True
         total_messages = len(documents)
         rejected = 0
         accepted = total_messages
@@ -27,13 +26,27 @@ class Indexer:
         result = await self.elasticsearch.bulk(_bulk, request_timeout=conf.BULK_INSERT_TIMEOUT)
 
         if result["errors"]:
+            _second_bulk = []
             for idx, item in enumerate(result['items']):
                 if item['index'].get("error"):
-                    documents[idx].reject()
                     rejected += 1
-                    if should_log_error:
-                        await self.logger.error({**item['index']['error'], "original-message-str": json.dumps(documents[idx].body['payload'])})
-                        should_log_error = False #Logamos apenas um erro por batch
+                    original_document = documents[idx]
+                    _second_bulk.append({ "index" : { "_index" : self._index_name(original_document.body), "_type" : "logs"}})
+                    prepared_document = self._prepare_document(original_document.body)
+                    new_document = {
+                        "asgard": {
+                            "original": {
+                                "msg": json.dumps(original_document.body['payload'])
+                            },
+                            "error": item["index"]["error"],
+                            "index_error": True,
+                        },
+                        "timestamp": prepared_document["timestamp"],
+                        #"appname": f"/{self._app_name_with_namespace(original_document)}",
+                        #"asgard_index_delay": prepared_document["asgard_index_delay"]
+                    }
+                    _second_bulk.append(new_document)
+            await self.elasticsearch.bulk(_second_bulk, request_timeout=conf.BULK_INSERT_TIMEOUT)
         await self.logger.info({"messages-processed": total_messages, "accepted-messages": accepted - rejected, "rejected": rejected, "errors": result['errors']})
         return result
 
