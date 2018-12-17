@@ -2,7 +2,7 @@ from datetime import datetime
 from functools import partial
 
 from asyncworker import App
-from asyncworker.options import Options
+from asyncworker.options import Options, RouteTypes
 from asyncworker.utils import Timeit, TimeitCallback
 
 from logingestor import conf
@@ -16,11 +16,15 @@ app = App(host=conf.RABBITMQ_HOST, user=conf.RABBITMQ_USER, password=conf.RABBIT
 
 indexer = AppIndexer(conf.elasticsearch, conf.logger)
 
-async def logger_function(total_messages, name, elapsed_time, *args, **kwargs):
-    await conf.logger.info({name: elapsed_time, "total-messages": total_messages, **kwargs})
+async def logger_function(logger, total_messages, **kwargs):
+    await logger.info({
+        "event": "bulk_log_index",
+        "messages": total_messages,
+        **kwargs['transactions']
+    })
 
-@app.route(conf.LOGS_QUEUE_NAMES, vhost=conf.RABBITMQ_VHOST, options = {Options.BULK_SIZE: conf.LOGS_BULK_SIZE})
+@app.route(conf.LOGS_QUEUE_NAMES, type=RouteTypes.AMQP_RABBITMQ, vhost=conf.RABBITMQ_VHOST, options = {Options.BULK_SIZE: conf.LOGS_BULK_SIZE})
 async def generic_app_log_indexer(messages):
-    logger_partial = partial(logger_function, len(messages))
-    async with Timeit(name="processing-time", callback=logger_partial):
+    logger_partial = partial(logger_function, conf.logger, len(messages))
+    async with Timeit(name="bulk_index_time", callback=logger_partial):
         await indexer.bulk(messages)
