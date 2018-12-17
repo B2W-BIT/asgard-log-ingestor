@@ -9,6 +9,7 @@ from logingestor import conf
 from logingestor.indexer import AppIndexer
 
 import logging
+from aiohttp import web
 
 logging.getLogger('elasticsearch').setLevel(logging.NOTSET)
 
@@ -28,3 +29,4 @@ async def generic_app_log_indexer(messages):
     logger_partial = partial(logger_function, conf.logger, len(messages))
     async with Timeit(name="bulk_index_time", callback=logger_partial):
         await indexer.bulk(messages)
+

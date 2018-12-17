@@ -21,6 +21,10 @@ class BaseIndexerTest(asynctest.TestCase):
                 return "myindex"
             def _extract_appname(self, doc):
                 return "/asgard/myapp"
+            def _prepare_document(self, document):
+                final_document = {}
+                final_document.update(document['payload'])
+                return final_document
 
         self.logger_mock = mock.CoroutineMock(info=mock.CoroutineMock(), error=mock.CoroutineMock())
         self.indexer = MyIndexer(self.elasticsearch_mock, self.logger_mock)
@@ -80,9 +84,9 @@ class BaseIndexerTest(asynctest.TestCase):
         ]
         expected_bulk_data = [
             { "index" : { "_index" : "myindex", "_type" : "logs"}},
-            messages[0].body,
+            {"timestamp": "2018-06-27T20:46:25+00:00", "field": "value", "appname": "/asgard/myapp", "asgard_index_delay": mock.ANY},
             { "index" : { "_index" : "myindex", "_type" : "logs"}},
-            messages[1].body,
+            {"timestamp": "2018-06-27T20:46:25+00:00", "field": "other-value", "appname": "/asgard/myapp", "asgard_index_delay": mock.ANY},
         ]
 
         indexer_bulk_mock.return_value = {"items": [], "errors": False}
@@ -92,7 +96,7 @@ class BaseIndexerTest(asynctest.TestCase):
     async def test_generated_right_action_data_for_bulk_insert(self):
         """
         Antes de passar o(s) documento(s) para o elasticsearch, devemos
-        chamar `self._prepare_document(document)`.
+        chamar `self.prepare_document(document)`.
         E para gerar o nome do índice onde esse documento será indexado, chamamos
         `self._index_name(document)`
         """
@@ -106,13 +110,16 @@ class BaseIndexerTest(asynctest.TestCase):
             def _index_name(self, document):
                 return "my-important-index"
 
+            def _extract_appname(self, document):
+                return "app"
+
         self.elasticsearch_mock.bulk.return_value = {"errors": False}
         indexer = MyIndexer(self.elasticsearch_mock, self.logger_mock)
         with mock.patch.object(conf, "BULK_INSERT_TIMEOUT", 60):
-            returned_by_elasticsearch = await indexer.bulk([CoroutineMock(body={"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10})])
+            returned_by_elasticsearch = await indexer.bulk([CoroutineMock(body={"timestamp": 1530132385, "key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10})])
             self.assertEqual([mock.call([
                 { "index" : { "_index" : "my-important-index", "_type" : "logs"}},
-                {"some-value": 10, "new-key": 42},
+                mock.ANY,
             ], request_timeout=conf.BULK_INSERT_TIMEOUT)], self.elasticsearch_mock.bulk.await_args_list)
             self.assertEqual({"errors": False}, returned_by_elasticsearch)
 
@@ -120,24 +127,33 @@ class BaseIndexerTest(asynctest.TestCase):
         class MyOtherIndexer(Indexer):
             def _index_name(self, document):
                 return "my-important-index"
+            def _extract_appname(self, doc):
+                return "app"
 
         indexer = MyOtherIndexer(self.elasticsearch_mock, self.logger_mock)
-        await indexer.bulk([CoroutineMock(body={"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10})])
+        await indexer.bulk([CoroutineMock(body={"timestamp": 1530132385, "key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10})])
         self.assertEqual([mock.call([
-            { "index" : { "_index" : "my-important-index", "_type" : "logs"}},
-            {"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10}], request_timeout=conf.BULK_INSERT_TIMEOUT)], self.elasticsearch_mock.bulk.await_args_list)
+            mock.ANY,
+            mock.ANY], request_timeout=conf.BULK_INSERT_TIMEOUT)], self.elasticsearch_mock.bulk.await_args_list)
 
     async def test_confirms_default_prepare_document_implementation(self):
         class MyOtherIndexer(Indexer):
             def _index_name(self, document):
                 return "my-important-index"
+            def _extract_appname(sefl, document):
+                return "myapp"
 
+        original_message = {
+            "timestamp": 1545058887,
+            "key": "errors.asgard.app.sieve.captura.kirby.powerup",
+            "some-value": 10
+        }
         indexer = MyOtherIndexer(self.elasticsearch_mock, self.logger_mock)
-        documents = [CoroutineMock(body={"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10})]
+        documents = [CoroutineMock(body=original_message)]
         await indexer.bulk(documents)
         self.assertEqual([mock.call([
             { "index" : { "_index" : "my-important-index", "_type" : "logs"}},
-            {"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10},
+            {"key": "errors.asgard.app.sieve.captura.kirby.powerup", "some-value": 10, "timestamp": "2018-12-17T15:01:27+00:00", "appname": "myapp", "asgard_index_delay": mock.ANY},
         ], request_timeout=conf.BULK_INSERT_TIMEOUT)], self.elasticsearch_mock.bulk.await_args_list)
 
     async def test_if_result_does_not_have_errors_dont_iterate_it(self):

@@ -22,7 +22,7 @@ class Indexer:
         _bulk = []
         for doc in documents:
             _bulk.append({ "index" : { "_index" : self._index_name(doc.body), "_type" : "logs"}})
-            _bulk.append(self._prepare_document(doc.body))
+            _bulk.append(self.prepare_document(doc.body))
         result = await self.elasticsearch.bulk(_bulk, request_timeout=conf.BULK_INSERT_TIMEOUT)
 
         if result["errors"]:
