@@ -2,7 +2,7 @@ from datetime import datetime
 from functools import partial
 
 from asyncworker import App
-from asyncworker.options import Options
+from asyncworker.options import Options, RouteTypes
 from asyncworker.utils import Timeit, TimeitCallback
 
 from logingestor import conf
@@ -20,6 +20,6 @@ app = App(host=conf.FLUENTD_INDEXER_RABBITMQ_HOST,
 
 indexer = FluentdMonitoringIndexer(conf.elasticsearch, conf.logger)
 
-@app.route(conf.FLUENTD_INDEXER_QUEUE_NAMES, vhost=conf.FLUENTD_INDEXER_RABBITMQ_VHOST, options = {Options.BULK_SIZE: conf.FLUENTD_INDEXER_BULK_SIZE})
+@app.route(conf.FLUENTD_INDEXER_QUEUE_NAMES, type=RouteTypes.AMQP_RABBITMQ, vhost=conf.FLUENTD_INDEXER_RABBITMQ_VHOST, options = {Options.BULK_SIZE: conf.FLUENTD_INDEXER_BULK_SIZE})
 async def fluentd_monitoring_events_indexer(messages):
     await indexer.bulk(messages)

@@ -36,3 +36,7 @@ class StatsIndexerTest(asynctest.TestCase):
         document = {"some-key": "some-value", "appname": "/dev/foo", "timestamp": 1531223488}
         expected_document = self.indexer._prepare_document(document)
         self.assertEqual(expected_document['timestamp'], "2018-07-10T11:51:28+00:00")
+
+    async def test_extracts_appname(self):
+        appname=  self.indexer._app_name_with_namespace({"appname": "/infra/app"})
+        self.assertEqual("/infra/app", appname)
