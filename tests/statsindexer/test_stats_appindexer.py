@@ -4,6 +4,7 @@ import asynctest
 from aiohttp.test_utils import TestClient, TestServer
 import asyncio
 
+from asyncworker.options import RouteTypes
 from asynctest.mock import CoroutineMock, ANY, patch
 from freezegun import freeze_time
 from logingestor import conf
@@ -49,7 +50,7 @@ class StatsIndexerTest(asynctest.TestCase):
 
     async def test_health_check_OK(self):
         await self.http_server.startup(app)
-        async with TestClient(TestServer(app['http_app']), loop=asyncio.get_event_loop()) as client:
+        async with TestClient(TestServer(app[RouteTypes.HTTP]['http_app']), loop=asyncio.get_event_loop()) as client:
             with patch.multiple(conf, elasticsearch=self.elasticsearch_mock):
                 self.elasticsearch_mock.ping = CoroutineMock(return_value=True)
                 resp = await client.get("/health")
@@ -62,7 +63,7 @@ class StatsIndexerTest(asynctest.TestCase):
 
     async def test_health_check_failing(self):
         await self.http_server.startup(app)
-        async with TestClient(TestServer(app['http_app']), loop=asyncio.get_event_loop()) as client:
+        async with TestClient(TestServer(app[RouteTypes.HTTP]['http_app']), loop=asyncio.get_event_loop()) as client:
             with patch.multiple(conf, elasticsearch=self.elasticsearch_mock):
                 self.elasticsearch_mock.ping = CoroutineMock(return_value=False)
                 resp = await client.get("/health")
