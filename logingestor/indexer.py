@@ -32,7 +32,7 @@ class Indexer:
                     rejected += 1
                     original_document = documents[idx]
                     _second_bulk.append({ "index" : { "_index" : self._index_name(original_document.body), "_type" : "logs"}})
-                    prepared_document = self._prepare_document(original_document.body)
+                    prepared_document = self.prepare_document(original_document.body)
                     new_document = {
                         "asgard": {
                             "original": {
@@ -50,8 +50,21 @@ class Indexer:
         await self.logger.info({"messages-processed": total_messages, "accepted-messages": accepted - rejected, "rejected": rejected, "errors": result['errors']})
         return result
 
+    def prepare_document(self, document):
+        final_document = self._prepare_document(document)
+
+        utcnow = datetime.now(timezone.utc)
+        timestamp = datetime.utcfromtimestamp(document['timestamp']).replace(tzinfo=timezone.utc)
+        processing_delay = utcnow - timestamp
+        final_document.update({
+            'asgard_index_delay': processing_delay.total_seconds(),
+            'timestamp': timestamp.isoformat(),
+            'appname': self._app_name_with_namespace(document),
+        })
+        return final_document
+
     def _prepare_document(self, document):
-        return document
+        return dict(document)
 
     def _index_name(self, doc):
         raise NotImplementedError
@@ -80,13 +93,5 @@ class AppIndexer(Indexer):
 
     def _prepare_document(self, raw_document):
         final_document = {}
-        utcnow = datetime.now(timezone.utc)
-        timestamp = datetime.utcfromtimestamp(raw_document['timestamp']).replace(tzinfo=timezone.utc)
-        processing_delay = utcnow - timestamp
         final_document.update(raw_document['payload'])
-        final_document.update({
-            'asgard_index_delay': processing_delay.total_seconds(),
-            'timestamp': timestamp.isoformat(),
-            'appname': self._app_name_with_namespace(raw_document),
-        })
         return final_document

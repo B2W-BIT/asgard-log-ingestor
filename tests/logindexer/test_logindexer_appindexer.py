@@ -85,27 +85,7 @@ class LogIndexerTest(asynctest.TestCase):
             "asgard_index_delay": ANY,
             "appname": ANY,
         }
-        prepared_document = self.indexer._prepare_document(self.logmessage_parse_ok)
-        self.assertDictEqual(expected_document, prepared_document)
-
-    @freeze_time("2018-06-21T19:26:06+00:00")
-    def test_prepare_indexed_document_do_not_override_special_fields(self):
-        self.logmessage_parse_ok['payload']['timestamp'] = 1530120546 # ~qua jun 27 17:28:57 UTC 2018
-        self.logmessage_parse_ok['payload']['asgard_index_delay'] = 42
-        self.logmessage_parse_ok['payload']['appname'] = "my-app-name"
-        expected_document = {
-           "timestamp" : "2018-06-21T19:26:06+00:00",
-           "appname" : "/infra/asgard/logs/counts",
-           "file_path" : "/opt/app/countsingestor/indexer.py",
-           "logged_at" : "2018-06-21T19:26:06.648610+00:00",
-           "level" : "INFO",
-           "line_number" : 37,
-           "index-time" : 0,
-           "function" : "index",
-           "count-type" : "OK",
-           "asgard_index_delay": 0.0,
-        }
-        prepared_document = self.indexer._prepare_document(self.logmessage_parse_ok)
+        prepared_document = self.indexer.prepare_document(self.logmessage_parse_ok)
         self.assertDictEqual(expected_document, prepared_document)
 
     def test_prepare_indexed_document_log_parse_error(self):
@@ -136,40 +116,8 @@ class LogIndexerTest(asynctest.TestCase):
             "source" : "stderr",
             "parse_error" : "true"
         }
-        prepared_document = self.indexer._prepare_document(self.logmessage_parse_error)
+        prepared_document = self.indexer.prepare_document(self.logmessage_parse_error)
         self.assertDictEqual(expected_document, prepared_document)
-
-    def test_prepare_indexed_document_add_delay_key_log_ok(self):
-        """
-        Vamos adicionar uma nova chave: `asgard_index_delay` que será
-        a diferença de tempo entre o `timestamp` (que é o momento em que o log foi processado
-        pelo fluentd) e o momento em que o log-ingestor processou o log.
-        O tempo será em segundos
-        """
-        with freeze_time("2018-06-21T19:26:06+00:00"):
-            prepared_document = self.indexer._prepare_document(self.logmessage_parse_ok)
-            self.assertEqual(0, prepared_document['asgard_index_delay'])
-
-        with freeze_time("2018-06-21T19:26:20+00:00"):
-            prepared_document = self.indexer._prepare_document(self.logmessage_parse_ok)
-            self.assertEqual(14, prepared_document['asgard_index_delay'])
-
-        with freeze_time("2018-06-21T19:27:10+00:00"):
-            prepared_document = self.indexer._prepare_document(self.logmessage_parse_ok)
-            self.assertEqual(64, prepared_document['asgard_index_delay'])
-
-    def test_prepare_indexed_document_add_delay_key_log_error(self):
-        with freeze_time("2018-06-27T14:09:56+00:00"):
-            prepared_document = self.indexer._prepare_document(self.logmessage_parse_error)
-            self.assertEqual(0, prepared_document['asgard_index_delay'])
-
-        with freeze_time("2018-06-27T14:10:10+00:00"):
-            prepared_document = self.indexer._prepare_document(self.logmessage_parse_error)
-            self.assertEqual(14, prepared_document['asgard_index_delay'])
-
-        with freeze_time("2018-06-27T14:11:00+00:00"):
-            prepared_document = self.indexer._prepare_document(self.logmessage_parse_error)
-            self.assertEqual(64, prepared_document['asgard_index_delay'])
 
     async def test_extracts_appname(self):
         self.assertEqual("/infra/apps/myapp", self.indexer._app_name_with_namespace({"key": "asgard.app.infra.apps.myapp"}))
