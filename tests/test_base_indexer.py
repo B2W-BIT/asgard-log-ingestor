@@ -242,8 +242,10 @@ class BaseIndexerTest(asynctest.TestCase):
                         },
                         "timestamp": "2018-06-27T20:46:25+00:00",
                         "appname": "/infra/my/app",
+                        "asgard_index_delay": mock.ANY
             }
         ], request_timeout=conf.BULK_INSERT_TIMEOUT)
+        self.maxDiff = None
         self.assertEqual(expected_second_bulk_call, self.elasticsearch_mock.bulk.await_args_list[1])
 
     def test_prepare_indexed_document_add_delay_key_log_error(self):

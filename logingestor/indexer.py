@@ -43,7 +43,7 @@ class Indexer:
                         },
                         "timestamp": prepared_document["timestamp"],
                         "appname": self._app_name_with_namespace(original_document.body),
-                        #"asgard_index_delay": prepared_document["asgard_index_delay"]
+                        "asgard_index_delay": prepared_document["asgard_index_delay"]
                     }
                     _second_bulk.append(new_document)
             await self.elasticsearch.bulk(_second_bulk, request_timeout=conf.BULK_INSERT_TIMEOUT)
