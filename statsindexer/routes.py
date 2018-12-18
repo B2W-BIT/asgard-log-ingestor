@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from asyncworker import App
-from asyncworker.options import Options, RouteTypes
+from asyncworker.options import Options
 
 from logingestor import conf
 from statsindexer.indexer import StatsIndexer
@@ -10,6 +10,6 @@ app = App(host=conf.STATS_RABBITMQ_HOST, user=conf.STATS_RABBITMQ_USER, password
 
 indexer = StatsIndexer(conf.elasticsearch, conf.logger)
 
-@app.route(conf.STATS_QUEUE_NAMES, type=RouteTypes.AMQP_RABBITMQ, vhost=conf.STATS_RABBITMQ_VHOST, options = {Options.BULK_SIZE: conf.STATS_BULK_SIZE})
+@app.route(conf.STATS_QUEUE_NAMES, vhost=conf.STATS_RABBITMQ_VHOST, options = {Options.BULK_SIZE: conf.STATS_BULK_SIZE})
 async def app_stats_indexer_handler(messages):
     await indexer.bulk(messages)
