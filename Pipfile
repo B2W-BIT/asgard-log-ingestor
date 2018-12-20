@@ -19,3 +19,6 @@ codecov = "*"
 
 [requires]
 python_version = "3.6"
+
+[scripts]
+test = "py.test -v --cov=./ --cov-report term-missing -v"
