@@ -23,7 +23,7 @@ class RoutesTest(asynctest.TestCase):
             await routes.generic_app_log_indexer(messages)
             self.assertEqual(messages, list(indexer_bulk_mock.await_args_list[0][0][0]))
 
-            expected_logger_function_call = mock.call(conf.logger, 2, "bulk_index_time", mock.ANY)
+            expected_logger_function_call = mock.call(conf.logger, 2, "bulk_index_time", mock.ANY, None, None, None)
             self.assertEqual([expected_logger_function_call], logger_function_mock.await_args_list)
 
 
