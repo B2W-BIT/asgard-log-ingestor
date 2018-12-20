@@ -34,12 +34,11 @@ class StatsIndexerRoutesTest(asynctest.TestCase):
                         STATS_QUEUE_NAMES="asgard/counts, asgard/counts/errors,  asgard/other   "):
             importlib.reload(conf)
             importlib.reload(routes)
-            amqp_routes = routes.app.routes_registry.amqp_routes
-            my_route = list(filter(lambda r: r["handler"] == routes.app_stats_indexer_handler, amqp_routes))[0]
+
             self.assertEqual("10.0.0.42", routes.app.host)
             self.assertEqual("myuser", routes.app.user)
             self.assertEqual("secret", routes.app.password)
             self.assertEqual(1024, routes.app.prefetch_count)
-            self.assertEqual("myvhost", my_route['options']['vhost'])
-            self.assertEqual(64, my_route['options']['bulk_size'])
+            self.assertEqual("myvhost", routes.app.routes_registry[routes.app_stats_indexer_handler]['options']['vhost'])
+            self.assertEqual(64, routes.app.routes_registry[routes.app_stats_indexer_handler]['options']['bulk_size'])
 

@@ -33,13 +33,11 @@ class FluentdMonitoringIndexerRoutesTest(asynctest.TestCase):
                         FLUENTD_INDEXER_QUEUE_NAMES="fluentd.internal.monitoring"):
             importlib.reload(conf)
             importlib.reload(routes)
-            amqp_routes = routes.app.routes_registry.amqp_routes
-            my_route = list(filter(lambda r: r["handler"] == routes.fluentd_monitoring_events_indexer, amqp_routes))[0]
             self.assertEqual("10.0.0.42", routes.app.host)
             self.assertEqual("myuser", routes.app.user)
             self.assertEqual("secret", routes.app.password)
             self.assertEqual(1024, routes.app.prefetch_count)
-            self.assertEqual("myvhost", my_route['options']['vhost'])
-            self.assertEqual(64, my_route['options']['bulk_size'])
-            self.assertEqual(["fluentd.internal.monitoring"], my_route['routes'])
+            self.assertEqual("myvhost", routes.app.routes_registry[routes.fluentd_monitoring_events_indexer]['options']['vhost'])
+            self.assertEqual(64, routes.app.routes_registry[routes.fluentd_monitoring_events_indexer]['options']['bulk_size'])
+            self.assertEqual(["fluentd.internal.monitoring"], routes.app.routes_registry[routes.fluentd_monitoring_events_indexer]['route'])
 
