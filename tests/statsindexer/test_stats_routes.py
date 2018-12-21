@@ -34,6 +34,7 @@ class StatsIndexerRoutesTest(asynctest.TestCase):
                         STATS_QUEUE_NAMES="asgard/counts, asgard/counts/errors,  asgard/other   "):
             importlib.reload(conf)
             importlib.reload(routes)
+
             self.assertEqual("10.0.0.42", routes.app.host)
             self.assertEqual("myuser", routes.app.user)
             self.assertEqual("secret", routes.app.password)

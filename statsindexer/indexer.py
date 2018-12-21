@@ -13,3 +13,6 @@ class StatsIndexer(Indexer):
     def _index_name(self, document):
         data_part = datetime.utcnow().strftime("%Y-%m-%d-%H")
         return f"{conf.STATS_INDEX_PREFIX}-{data_part}"
+
+    def _extract_appname(self, document):
+        return document["appname"]

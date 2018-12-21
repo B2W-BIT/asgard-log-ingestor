@@ -23,8 +23,9 @@ class RoutesTest(asynctest.TestCase):
             await routes.generic_app_log_indexer(messages)
             self.assertEqual(messages, list(indexer_bulk_mock.await_args_list[0][0][0]))
 
-            positional_arguments_of_first_call = logger_function_mock.await_args_list[0][0]
-            self.assertEqual((2, "processing-time", mock.ANY), positional_arguments_of_first_call[:3])
+            expected_logger_function_call = mock.call(conf.logger, 2, "bulk_index_time", mock.ANY)
+            self.assertEqual([expected_logger_function_call], logger_function_mock.await_args_list)
+
 
     async def test_app_uses_right_configs(self):
 
@@ -38,6 +39,7 @@ class RoutesTest(asynctest.TestCase):
                         LOGS_QUEUE_NAMES="asgard/counts, asgard/counts/errors,  asgard/other   "):
             importlib.reload(conf)
             importlib.reload(routes)
+
             self.assertEqual("10.0.0.42", routes.app.host)
             self.assertEqual("myuser", routes.app.user)
             self.assertEqual("secret", routes.app.password)

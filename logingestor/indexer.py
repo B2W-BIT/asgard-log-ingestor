@@ -15,7 +15,6 @@ class Indexer:
         pass
 
     async def bulk(self, documents: List[RabbitMQMessage]):
-        should_log_error = True
         total_messages = len(documents)
         rejected = 0
         accepted = total_messages
@@ -23,51 +22,76 @@ class Indexer:
         _bulk = []
         for doc in documents:
             _bulk.append({ "index" : { "_index" : self._index_name(doc.body), "_type" : "logs"}})
-            _bulk.append(self._prepare_document(doc.body))
+            _bulk.append(self.prepare_document(doc.body))
         result = await self.elasticsearch.bulk(_bulk, request_timeout=conf.BULK_INSERT_TIMEOUT)
 
         if result["errors"]:
+            _second_bulk = []
             for idx, item in enumerate(result['items']):
                 if item['index'].get("error"):
-                    documents[idx].reject()
                     rejected += 1
-                    if should_log_error:
-                        await self.logger.error({**item['index']['error'], "original-message-str": json.dumps(documents[idx].body['payload'])})
-                        should_log_error = False #Logamos apenas um erro por batch
+                    original_document = documents[idx]
+                    _second_bulk.append({ "index" : { "_index" : self._index_name(original_document.body), "_type" : "logs"}})
+                    prepared_document = self.prepare_document(original_document.body)
+                    new_document = {
+                        "asgard": {
+                            "original": {
+                                "msg": json.dumps(original_document.body['payload'])
+                            },
+                            "error": item["index"]["error"],
+                            "index_error": True,
+                        },
+                        "timestamp": prepared_document["timestamp"],
+                        "appname": self._app_name_with_namespace(original_document.body),
+                        "asgard_index_delay": prepared_document["asgard_index_delay"]
+                    }
+                    _second_bulk.append(new_document)
+            await self.elasticsearch.bulk(_second_bulk, request_timeout=conf.BULK_INSERT_TIMEOUT)
         await self.logger.info({"messages-processed": total_messages, "accepted-messages": accepted - rejected, "rejected": rejected, "errors": result['errors']})
         return result
 
+    def prepare_document(self, document):
+        final_document = self._prepare_document(document)
+
+        utcnow = datetime.now(timezone.utc)
+        timestamp = datetime.utcfromtimestamp(document['timestamp']).replace(tzinfo=timezone.utc)
+        processing_delay = utcnow - timestamp
+        final_document.update({
+            'asgard_index_delay': processing_delay.total_seconds(),
+            'timestamp': timestamp.isoformat(),
+            'appname': self._app_name_with_namespace(document),
+        })
+        return final_document
+
     def _prepare_document(self, document):
-        return document
+        return dict(document)
 
     def _index_name(self, doc):
         raise NotImplementedError
+
+    def _extract_appname(self, document):
+        raise NotImplementedError
+
+    def _app_name_with_namespace(self, document):
+        return self._extract_appname(document)
 
 
 class AppIndexer(Indexer):
 
 
-    def _app_name_with_namespace(self, document):
+    def _extract_appname(self, document):
         app_name_with_namespace = document['key'].replace("errors.", "", 1) \
                                              .replace("asgard.app.", "", 1) \
                                              .replace(".", "/")
-        return app_name_with_namespace
+        return f"/{app_name_with_namespace}"
 
 
     def _index_name(self, document):
-        app_name_with_namespace = self._app_name_with_namespace(document).replace("/", "-")
+        app_name_with_namespace = self._app_name_with_namespace(document).strip("/").replace("/", "-")
         data_part = datetime.utcnow().strftime("%Y-%m-%d-%H")
         return f"asgard-app-logs-{app_name_with_namespace}-{data_part}"
 
     def _prepare_document(self, raw_document):
         final_document = {}
-        utcnow = datetime.now(timezone.utc)
-        timestamp = datetime.utcfromtimestamp(raw_document['timestamp']).replace(tzinfo=timezone.utc)
-        processing_delay = utcnow - timestamp
         final_document.update(raw_document['payload'])
-        final_document.update({
-            'asgard_index_delay': processing_delay.total_seconds(),
-            'timestamp': timestamp.isoformat(),
-            'appname': f"/{self._app_name_with_namespace(raw_document)}",
-        })
         return final_document
