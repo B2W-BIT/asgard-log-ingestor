@@ -176,6 +176,8 @@ class BaseIndexerTest(asynctest.TestCase):
             self.assertEqual(0, messages[1].reject.call_count)
             self.assertEqual(0, messages[2].reject.call_count)
 
+
+    @freeze_time("2018-06-27T20:46:25+00:00")
     async def test_should_index_a_different_document_for_messages_with_index_errors(self):
         """
         Para documentos que o ES se recusou a indexar, geramos um novo bulk contendo
@@ -244,11 +246,14 @@ class BaseIndexerTest(asynctest.TestCase):
         indexer = AppIndexer(self.elasticsearch_mock, self.logger_mock)
         await indexer.bulk(messages)
         self.assertEqual(self.elasticsearch_mock.bulk.await_count, 2)
+
+        expected_original_msg = indexer._prepare_document(messages[0].body)
+
         expected_second_bulk_call = mock.call([
             { "index" : { "_index" : indexer._index_name(messages[0].body), "_type" : "logs"}},
             { "asgard": {
                             "original": {
-                                "msg": json.dumps(messages[0].body['payload'])
+                                "msg": json.dumps(expected_original_msg)
                             },
                             "error":  {
                                  "type" : "illegal_argument_exception",
@@ -261,7 +266,6 @@ class BaseIndexerTest(asynctest.TestCase):
                         "asgard_index_delay": mock.ANY
             }
         ], request_timeout=conf.BULK_INSERT_TIMEOUT)
-        self.maxDiff = None
         self.assertEqual(expected_second_bulk_call, self.elasticsearch_mock.bulk.await_args_list[1])
 
     def test_prepare_indexed_document_add_delay_key_log_error(self):

@@ -36,7 +36,7 @@ class Indexer:
                     new_document = {
                         "asgard": {
                             "original": {
-                                "msg": json.dumps(original_document.body['payload'])
+                                "msg": json.dumps(self._prepare_document(original_document.body))
                             },
                             "error": item["index"]["error"],
                             "index_error": True,
