@@ -6,9 +6,10 @@ from logingestor import conf
 class StatsIndexer(Indexer):
 
     def _prepare_document(self, document):
+        doc_copy = document.copy()
         original_timestamp = datetime.utcfromtimestamp(document['timestamp']).replace(tzinfo=timezone.utc)
-        document['timestamp'] = original_timestamp.isoformat()
-        return document
+        doc_copy['timestamp'] = original_timestamp.isoformat()
+        return doc_copy
 
     def _index_name(self, document):
         data_part = datetime.utcnow().strftime("%Y-%m-%d-%H")
