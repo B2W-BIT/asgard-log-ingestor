@@ -28,13 +28,13 @@ class StatsIndexerTest(asynctest.TestCase):
         ):
             reload(conf)
             self.assertEqual(
-                "asgard-app-stats-index-2018-06-27-13",
+                "asgard-app-stats-index-infra-app-in-some-inner-folder-2018-06-27-13",
                 self.indexer._index_name(
                     {"appname": "/infra/app/in/some/inner/folder"}
                 ),
             )
             self.assertEqual(
-                "asgard-app-stats-index-2018-06-27-13",
+                "asgard-app-stats-index-dev-other-app-with-dashes-2018-06-27-13",
                 self.indexer._index_name(
                     {"appname": "/dev/other/app-with-dashes"}
                 ),

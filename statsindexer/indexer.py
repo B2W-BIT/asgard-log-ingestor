@@ -14,8 +14,9 @@ class StatsIndexer(Indexer):
         return doc_copy
 
     def _index_name(self, document):
+        app_part = document["appname"].strip("/").replace("/", "-")
         data_part = datetime.utcnow().strftime("%Y-%m-%d-%H")
-        return f"{conf.STATS_INDEX_PREFIX}-{data_part}"
+        return f"{conf.STATS_INDEX_PREFIX}-{app_part}-{data_part}"
 
     def _extract_appname(self, document):
         return document["appname"]
