@@ -4,10 +4,10 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-aiologger = "==0.1.1-rc1"
 async-worker = "==0.2.1-rc2"
 asgard-api-sdk = "==0.3.0-rc1"
 aioelasticsearch = "==0.5.2"
+aiologger = "==0.4.0-rc1"
 
 [dev-packages]
 ipdb = "==0.11"
@@ -16,9 +16,20 @@ pytest = "==3.8.0"
 pytest-coverage = "*"
 asynctest = "==0.12.2"
 codecov = "*"
+mypy = "==0.630"
+black = "==18.9b0"
+isort = "==4.3.15"
 
 [requires]
 python_version = "3.6"
 
 [scripts]
 test = "py.test -v --cov=./ --cov-report term-missing -v"
+lint = "mypy ./ --ignore-missing-imports"
+fmt = "black --py36 -v --line-length 80 ."
+fmt-check = "black --py36 -v --line-length 80 --check ."
+isort-fmt = "isort --apply --recursive --line-width 80 --use-parentheses --no-inline-sort --multi-line 3 --trailing-comma ."
+isort-check = "isort --check-only --recursive --line-width 80 --use-parentheses --no-inline-sort --multi-line 3 --trailing-comma ."
+
+[pipenv]
+allow_prereleases = true
